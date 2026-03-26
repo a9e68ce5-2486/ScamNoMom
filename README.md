@@ -1,6 +1,48 @@
 # ScamNoMom
 
-[繁體中文版本](./README.zh-TW.md)
+[繁體中文詳細版](./README.zh-TW.md)
+
+ScamNoMom 是一個以瀏覽器端為核心的詐騙與釣魚偵測專案，重點放在：
+
+- 可疑連結與導流網址
+- 釣魚網站
+- Webmail 釣魚郵件
+- 台灣常見詐騙話術與品牌冒用
+
+目前是可實際執行的 local-first MVP，主要組成包含：
+
+- `Chrome Extension (MV3)`：特徵擷取、頁面警告、popup 與設定頁
+- `Node.js + TypeScript API`：規則引擎、LLM 分析、Agent-ready second pass
+- `OpenAI` 或 `Ollama/Qwen`：語意分析
+- `Feedback + Dataset + Dashboard + Evaluation`：持續優化流程
+
+快速入口：
+
+- 中文說明文件：[README.zh-TW.md](./README.zh-TW.md)
+- 安裝方式：[INSTALL.zh-TW.md](./INSTALL.zh-TW.md)
+- 目前架構：[docs/current-architecture.zh-TW.md](./docs/current-architecture.zh-TW.md)
+
+目前最重要的能力：
+
+- 一般網站與 Webmail 的釣魚風險分析
+- Gmail / Outlook / Yahoo / Proton Mail 支援
+- 台灣品牌白名單與詐騙話術規則
+- 中風險案例的 redirect / short-link / DNS / local feed second pass
+- 純文字訊息與對話詐騙分析：`POST /analyze/text`
+- 使用者回饋、資料整理、評估與規則權重調整
+
+目前仍待補強的重點：
+
+- 真正外部 threat intel：WHOIS、domain age、blacklist、DNS
+- 更完整的 email authenticity：SPF / DKIM / DMARC
+- 更完整的測試與 benchmark dataset
+- 更成熟的正式發佈與安裝體驗
+
+---
+
+## English Summary
+
+[Full Traditional Chinese README](./README.zh-TW.md)
 
 ScamNoMom is a hybrid phishing and scam detection project focused on:
 

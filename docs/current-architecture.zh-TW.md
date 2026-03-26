@@ -295,7 +295,14 @@ PageFeatures
 - email sender / reply-to 網域不一致
 - email sender domain 與品牌不一致
 
-目前這層是本地 agent-ready analyzer，還不是外部 threat-intel agent。
+目前這層已具備本地 second-pass threat-intel 能力，但還不是完整的外部 threat-intel agent。
+
+目前已做：
+
+- redirect / short-link 解析
+- local phishing feed 命中比對
+- DNS 訊號檢查
+- sender domain 的 MX / SPF 基本觀察
 
 ## 6. 風險分數與決策
 

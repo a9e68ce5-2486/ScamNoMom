@@ -93,6 +93,19 @@ export interface AnalysisResult {
       finalUrl: string;
       hopCount: number;
     }>;
+    threatIntel?: {
+      checkedHostnames: string[];
+      blacklistMatches: string[];
+      riskyIpHosts: string[];
+      dnsFindings: Array<{
+        hostname: string;
+        aRecordCount: number;
+        nsRecordCount: number;
+        mxRecordCount: number;
+        hasSpfRecord: boolean;
+        lookupError?: string;
+      }>;
+    };
   };
   evidence: {
     ruleScore: number;

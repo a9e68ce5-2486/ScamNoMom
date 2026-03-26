@@ -2,6 +2,7 @@ import { findMismatchedBrandLinks, findMismatchedBrands } from "../config/tw-bra
 import { hasKeywordMatch } from "../config/tw-scam-keywords.js";
 import { resolveRedirectChain } from "./redirect-resolver.js";
 import { extractRuleSignals } from "./rule-signals.js";
+import { runThreatIntel } from "./threat-intel.js";
 import type { AttackType, PageFeatures } from "../types/analysis.js";
 
 interface AgentAnalyzerInput {
@@ -20,6 +21,19 @@ export interface AgentAnalyzerResult {
     finalUrl: string;
     hopCount: number;
   }>;
+  threatIntel?: {
+    checkedHostnames: string[];
+    blacklistMatches: string[];
+    riskyIpHosts: string[];
+    dnsFindings: Array<{
+      hostname: string;
+      aRecordCount: number;
+      nsRecordCount: number;
+      mxRecordCount: number;
+      hasSpfRecord: boolean;
+      lookupError?: string;
+    }>;
+  };
 }
 
 const SHORTENER_HOSTS = new Set([
@@ -128,6 +142,24 @@ export async function runAgentAnalyzer(features: PageFeatures, input: AgentAnaly
     reasons.push("Redirect-style links resolve to a different final destination.");
   }
 
+  const threatIntelHosts = [
+    features.hostname,
+    ...features.links.hostnames.slice(0, 5),
+    ...redirectFindings.map((finding) => {
+      try {
+        return new URL(finding.finalUrl).hostname;
+      } catch {
+        return "";
+      }
+    })
+  ].filter(Boolean);
+  const threatIntel = await runThreatIntel(threatIntelHosts, emailSenderDomain);
+
+  if (threatIntel.scoreDelta > 0) {
+    score += threatIntel.scoreDelta;
+    reasons.push(...threatIntel.reasons);
+  }
+
   if (hostnameRiskSignals >= 2) {
     score += 14;
     reasons.push("Hostname structure looks algorithmic or disguise-oriented.");
@@ -195,6 +227,12 @@ export async function runAgentAnalyzer(features: PageFeatures, input: AgentAnaly
     confidence,
     reasons,
     attackType: attackType === input.attackType ? undefined : attackType,
-    redirectFindings
+    redirectFindings,
+    threatIntel: {
+      checkedHostnames: threatIntel.checkedHostnames,
+      blacklistMatches: threatIntel.blacklistMatches,
+      riskyIpHosts: threatIntel.riskyIpHosts,
+      dnsFindings: threatIntel.dnsFindings
+    }
   };
 }
