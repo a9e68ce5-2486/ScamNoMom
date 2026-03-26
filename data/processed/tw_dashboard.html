@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PhishGuard Taiwan Dashboard</title>
+    <style>
+      :root {
+        --bg: #f4efe7;
+        --panel: rgba(255,255,255,0.78);
+        --ink: #1c1712;
+        --muted: #665c50;
+        --line: rgba(88,65,39,0.14);
+        --accent: #c8683a;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top right, rgba(205,162,116,0.35), transparent 35%),
+          linear-gradient(180deg, #fbf7ef 0%, var(--bg) 100%);
+      }
+      main {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 28px;
+        display: grid;
+        gap: 18px;
+      }
+      .hero, .panel {
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: var(--panel);
+        padding: 18px;
+      }
+      .hero h1 { margin: 6px 0; font-size: 34px; }
+      .eyebrow {
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+      .stat {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 14px;
+        background: rgba(255,255,255,0.55);
+      }
+      .stat-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+      }
+      .stat-value {
+        margin-top: 6px;
+        font-size: 32px;
+        font-weight: 700;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th, td {
+        text-align: left;
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+        font-size: 14px;
+      }
+      th {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      .empty {
+        color: var(--muted);
+        font-style: italic;
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .wide {
+        grid-column: 1 / -1;
+      }
+      .pill {
+        display: inline-block;
+        margin-right: 8px;
+        margin-bottom: 8px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        background: rgba(200,104,58,0.1);
+        border: 1px solid rgba(200,104,58,0.18);
+        font-size: 13px;
+      }
+      @media (max-width: 900px) {
+        .summary, .grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="eyebrow">PhishGuard Intelligence</div>
+        <h1>Taiwan Scam Trend Dashboard</h1>
+        <div class="meta">Generated 3/26/2026, 3:31:10 PM</div>
+      </section>
+
+      <section class="summary">
+        <div class="stat">
+          <div class="stat-label">Total Samples</div>
+          <div class="stat-value">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Phishing Samples</div>
+          <div class="stat-value">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Safe Samples</div>
+          <div class="stat-value">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Tracked TW Brands</div>
+          <div class="stat-value">20</div>
+        </div>
+      </section>
+
+      <section class="grid">
+        <section class="panel">
+          <h2>Sample Sources</h2>
+          <table>
+            <thead><tr><th>#</th><th>Source</th><th>Count</th></tr></thead>
+            <tbody><tr><td colspan="3" class="empty">No samples yet</td></tr></tbody>
+          </table>
+        </section>
+        <section class="panel">
+          <h2>Attack Types</h2>
+          <table>
+            <thead><tr><th>#</th><th>Type</th><th>Count</th></tr></thead>
+            <tbody><tr><td colspan="3" class="empty">No phishing attack types yet</td></tr></tbody>
+          </table>
+        </section>
+        <section class="panel">
+          <h2>Hot Brands</h2>
+          <table>
+            <thead><tr><th>#</th><th>Brand</th><th>Mentions</th></tr></thead>
+            <tbody><tr><td colspan="3" class="empty">No hot brands yet</td></tr></tbody>
+          </table>
+        </section>
+        <section class="panel">
+          <h2>Keyword Coverage</h2>
+          <div>
+            <span class="pill">credential: 10</span><span class="pill">urgency: 12</span><span class="pill">payment: 13</span><span class="pill">logistics: 9</span><span class="pill">prize: 5</span>
+          </div>
+          <div class="meta" style="margin-top:12px;">Candidate snapshot generated: 2026-03-26T21:31:10.355Z</div>
+        </section>
+        <section class="panel">
+          <h2>High-Confidence Keywords</h2>
+          <table>
+            <thead><tr><th>#</th><th>Keyword</th><th>Category</th><th>Confidence</th><th>Example</th></tr></thead>
+            <tbody><tr><td colspan="5" class="empty">No high-confidence keywords yet</td></tr></tbody>
+          </table>
+        </section>
+        <section class="panel">
+          <h2>High-Confidence Phrases</h2>
+          <table>
+            <thead><tr><th>#</th><th>Phrase</th><th>Category</th><th>Confidence</th><th>Example</th></tr></thead>
+            <tbody><tr><td colspan="5" class="empty">No high-confidence phrases yet</td></tr></tbody>
+          </table>
+        </section>
+        <section class="panel">
+          <h2>Latest Candidate Keywords</h2>
+          <table>
+            <thead><tr><th>#</th><th>Keyword</th><th>Category</th><th>Confidence</th><th>Example</th></tr></thead>
+            <tbody><tr><td colspan="5" class="empty">No candidate keywords yet</td></tr></tbody>
+          </table>
+        </section>
+        <section class="panel">
+          <h2>Latest Candidate Phrases</h2>
+          <table>
+            <thead><tr><th>#</th><th>Phrase</th><th>Category</th><th>Confidence</th><th>Example</th></tr></thead>
+            <tbody><tr><td colspan="5" class="empty">No candidate phrases yet</td></tr></tbody>
+          </table>
+        </section>
+        <section class="panel wide">
+          <h2>Candidate Keywords</h2>
+          <table>
+            <thead><tr><th>#</th><th>Keyword</th><th>Predicted Category</th><th>Confidence</th><th>Example</th></tr></thead>
+            <tbody><tr><td colspan="5" class="empty">No candidate keywords yet</td></tr></tbody>
+          </table>
+        </section>
+        <section class="panel wide">
+          <h2>Candidate Phrases</h2>
+          <table>
+            <thead><tr><th>#</th><th>Phrase</th><th>Predicted Category</th><th>Confidence</th><th>Example</th></tr></thead>
+            <tbody><tr><td colspan="5" class="empty">No candidate phrases yet</td></tr></tbody>
+          </table>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

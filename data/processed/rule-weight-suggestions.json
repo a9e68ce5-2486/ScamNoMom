@@ -1,0 +1,198 @@
+{
+  "generatedAt": "2026-03-26T22:58:49.919Z",
+  "feedbackCounts": {
+    "phishing": 0,
+    "safe": 0
+  },
+  "suggestions": {
+    "passwordFields": {
+      "signal": "hasPasswordFields",
+      "currentWeight": 20,
+      "suggestedWeight": 20,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "externalSubmit": {
+      "signal": "externalSubmitCount",
+      "currentWeight": 25,
+      "suggestedWeight": 25,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "mismatchedText": {
+      "signal": "mismatchedTextCount",
+      "currentWeight": 15,
+      "suggestedWeight": 15,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "suspiciousLinkTldBase": {
+      "signal": "suspiciousTldCount",
+      "currentWeight": 10,
+      "suggestedWeight": 10,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "hiddenElements": {
+      "signal": "hiddenElementCount",
+      "currentWeight": 10,
+      "suggestedWeight": 10,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "iframeHeavy": {
+      "signal": "iframeCount",
+      "currentWeight": 8,
+      "suggestedWeight": 8,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "suspiciousHostnameTld": {
+      "signal": "hostnameUsesSuspiciousTld",
+      "currentWeight": 12,
+      "suggestedWeight": 12,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "brandOnCredentialPage": {
+      "signal": "brandOnCredentialPage",
+      "currentWeight": 12,
+      "suggestedWeight": 12,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "mismatchedBrand": {
+      "signal": "mismatchedBrands",
+      "currentWeight": 22,
+      "suggestedWeight": 22,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "mismatchedBrandLinks": {
+      "signal": "mismatchedBrandLinks",
+      "currentWeight": 18,
+      "suggestedWeight": 18,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "taiwanBrandActionPattern": {
+      "signal": "hasTaiwanBrandActionPattern",
+      "currentWeight": 12,
+      "suggestedWeight": 12,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "traditionalScamLanguage": {
+      "signal": "hasTraditionalScamLanguage",
+      "currentWeight": 14,
+      "suggestedWeight": 14,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "emailContext": {
+      "signal": "emailContext",
+      "currentWeight": 8,
+      "suggestedWeight": 8,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "emailManyLinks": {
+      "signal": "emailHasManyLinks",
+      "currentWeight": 10,
+      "suggestedWeight": 10,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "emailLinkMismatch": {
+      "signal": "emailLinkMismatch",
+      "currentWeight": 10,
+      "suggestedWeight": 10,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "emailHighTrustSenderStyle": {
+      "signal": "emailHighTrustSenderStyle",
+      "currentWeight": 6,
+      "suggestedWeight": 6,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "emailUrgencyLanguage": {
+      "signal": "emailUrgencyLanguage",
+      "currentWeight": 15,
+      "suggestedWeight": 15,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "emailTraditionalScamLanguage": {
+      "signal": "emailTraditionalScamLanguage",
+      "currentWeight": 16,
+      "suggestedWeight": 16,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "emailSenderReplyToMismatch": {
+      "signal": "emailSenderReplyToMismatch",
+      "currentWeight": 18,
+      "suggestedWeight": 18,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "emailBrandDomainMismatch": {
+      "signal": "emailBrandDomainMismatch",
+      "currentWeight": 16,
+      "suggestedWeight": 16,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    },
+    "emailFreemailBrandClaim": {
+      "signal": "emailUsesFreemailForBrandClaim",
+      "currentWeight": 12,
+      "suggestedWeight": 12,
+      "phishingAverage": 0,
+      "safeAverage": 0,
+      "delta": 0,
+      "recommendation": "keep"
+    }
+  }
+}

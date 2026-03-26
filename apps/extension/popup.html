@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ScamNoMom</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="card">
+      <header class="hero">
+        <div class="eyebrow">Hybrid phishing analysis</div>
+        <div class="hero-row">
+          <div>
+            <h1>ScamNoMom</h1>
+            <p id="subtitle" class="subtitle">Waiting for page analysis.</p>
+          </div>
+          <div id="badge" class="badge neutral">Idle</div>
+        </div>
+        <div class="hero-actions">
+          <div class="hero-buttons">
+            <button id="rescan-btn" class="rescan-btn" type="button">Rescan Current Tab</button>
+            <button id="settings-btn" class="rescan-btn secondary-btn" type="button">Settings</button>
+          </div>
+          <span id="rescan-status" class="rescan-status">Idle</span>
+        </div>
+      </header>
+
+      <section id="status" class="status neutral">
+        <div class="status-top">
+          <div>
+            <div class="status-label">Risk score</div>
+            <div id="score" class="score">--</div>
+          </div>
+          <div class="action-box">
+            <div class="action-label">Recommended action</div>
+            <div id="action" class="action-value">Pending</div>
+          </div>
+        </div>
+        <div class="meter">
+          <div id="meter-fill" class="meter-fill"></div>
+        </div>
+      </section>
+
+      <section class="panel facts">
+        <div class="fact">
+          <span class="fact-label">Attack type</span>
+          <span id="attack-type" class="fact-value">Unknown</span>
+        </div>
+        <div class="fact">
+          <span class="fact-label">Confidence</span>
+          <span id="confidence" class="fact-value">--</span>
+        </div>
+        <div class="fact">
+          <span class="fact-label">Engine</span>
+          <span id="provider" class="fact-value">Waiting</span>
+        </div>
+        <div class="fact">
+          <span class="fact-label">Source</span>
+          <span id="source" class="fact-value">Waiting</span>
+        </div>
+        <div class="fact">
+          <span class="fact-label">Mail Provider</span>
+          <span id="mail-provider" class="fact-value">N/A</span>
+        </div>
+        <div class="fact">
+          <span class="fact-label">Page Host</span>
+          <span id="hostname" class="fact-value">--</span>
+        </div>
+      </section>
+
+      <section class="panel score-breakdown">
+        <h2>Score Breakdown</h2>
+        <div class="breakdown-row">
+          <span>Rule Engine</span>
+          <strong id="rule-score">--</strong>
+        </div>
+        <div class="breakdown-row">
+          <span>LLM Analyzer</span>
+          <strong id="llm-score">--</strong>
+        </div>
+      </section>
+
+      <section class="panel details">
+        <h2>Reasons</h2>
+        <ul id="reasons">
+          <li>No analysis yet.</li>
+        </ul>
+      </section>
+
+      <section class="panel feedback-panel">
+        <div class="feedback-header">
+          <h2>Teach ScamNoMom</h2>
+          <span id="feedback-status" class="feedback-status">No feedback sent</span>
+        </div>
+        <div class="feedback-actions">
+          <button id="mark-safe-btn" class="feedback-btn" type="button">Mark Safe</button>
+          <button id="mark-phishing-btn" class="feedback-btn feedback-btn-danger" type="button">Mark Phishing</button>
+        </div>
+      </section>
+
+      <details id="debug-panel" class="panel debug">
+        <summary class="debug-summary">
+          <span class="debug-summary-title">Debug Capture</span>
+          <span class="debug-note">For DOM selector validation</span>
+        </summary>
+        <div class="debug-grid">
+          <div class="debug-item">
+            <span class="fact-label">Subject</span>
+            <span id="debug-subject" class="debug-value">--</span>
+          </div>
+          <div class="debug-item">
+            <span class="fact-label">Sender</span>
+            <span id="debug-sender" class="debug-value">--</span>
+          </div>
+          <div class="debug-item debug-item-wide">
+            <span class="fact-label">Body Excerpt</span>
+            <span id="debug-body" class="debug-value">--</span>
+          </div>
+        </div>
+      </details>
+
+      <footer class="footer">
+        <span id="timestamp">No recent analysis</span>
+      </footer>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

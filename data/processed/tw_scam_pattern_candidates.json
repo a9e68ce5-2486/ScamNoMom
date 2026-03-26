@@ -1,0 +1,8 @@
+{
+  "generatedAt": "2026-03-26T21:31:10.355Z",
+  "inputSamples": 0,
+  "candidateKeywords": [],
+  "candidatePhrases": [],
+  "hotBrands": [],
+  "recommendation": "Review predictedCategory and confidence for candidateKeywords and candidatePhrases, then promote approved items into data/tw_scam_keywords.json."
+}

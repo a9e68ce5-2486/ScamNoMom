@@ -1,0 +1,26 @@
+{
+  "name": "scamnomom",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup:ollama": "node scripts/setup.mjs --provider ollama",
+    "setup:openai": "node scripts/setup.mjs --provider openai",
+    "setup:auto": "node scripts/setup.mjs --provider auto",
+    "start": "node scripts/start_system.mjs",
+    "start:dev": "node scripts/start_system.mjs --dev",
+    "api:start": "node scripts/start_api.mjs",
+    "api:start:dev": "node scripts/start_api.mjs --dev",
+    "pipeline": "node scripts/run_pipeline.mjs",
+    "pipeline:skip-fetch": "node scripts/run_pipeline.mjs --skip-fetch",
+    "evaluate": "cd apps/api && npm run build && cd ../.. && node scripts/evaluate_dataset.mjs",
+    "tune:rules": "cd apps/api && npm run build && cd ../.. && node scripts/tune_rule_weights.mjs",
+    "schedule:install": "node scripts/install_daily_pipeline_schedule.mjs --hour 3 --minute 15",
+    "schedule:uninstall": "node scripts/install_daily_pipeline_schedule.mjs --uninstall",
+    "service:install": "node scripts/install_api_service_schedule.mjs",
+    "service:install:dev": "node scripts/install_api_service_schedule.mjs --dev",
+    "service:uninstall": "node scripts/install_api_service_schedule.mjs --uninstall",
+    "release:extension": "node scripts/package_extension_release.mjs",
+    "release:bundle": "node scripts/package_portable_bundle.mjs"
+  }
+}

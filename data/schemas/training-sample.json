@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PhishGuard Training Sample",
+  "type": "object",
+  "required": ["id", "sourceType", "label", "content", "signals", "provenance"],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "sourceType": {
+      "type": "string",
+      "enum": ["web", "email", "url_feed"]
+    },
+    "label": {
+      "type": "string",
+      "enum": ["safe", "phishing"]
+    },
+    "content": {
+      "type": "object",
+      "required": ["url", "hostname"],
+      "properties": {
+        "url": { "type": "string" },
+        "hostname": { "type": "string" },
+        "title": { "type": "string" },
+        "visibleText": { "type": "string" },
+        "subject": { "type": "string" },
+        "sender": { "type": "string" },
+        "bodyText": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "signals": {
+      "type": "object",
+      "required": ["ruleScore", "llmScore", "riskScore"],
+      "properties": {
+        "ruleScore": { "type": "number" },
+        "llmScore": { "type": "number" },
+        "riskScore": { "type": "number" },
+        "attackType": { "type": "string" },
+        "brandSignals": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "emailProvider": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["sourceName", "collectedAt"],
+      "properties": {
+        "sourceName": { "type": "string" },
+        "collectedAt": { "type": "string" },
+        "feedbackId": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

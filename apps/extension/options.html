@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ScamNoMom Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="panel hero">
+        <div class="eyebrow">ScamNoMom</div>
+        <h1>Extension Settings</h1>
+        <p class="subtitle">Adjust the local API address and how live page warnings behave.</p>
+      </section>
+
+      <section class="panel form-panel">
+        <label class="field">
+          <span class="label">API Base URL</span>
+          <input id="api-base-url" type="url" placeholder="http://localhost:8787" />
+          <span class="hint">Use the local API address that serves `/analyze` and `/feedback`.</span>
+        </label>
+
+        <label class="toggle">
+          <input id="overlay-enabled" type="checkbox" />
+          <span>
+            <strong>Show on-page warning overlay</strong>
+            <small>Display a warning card in the current tab when risk is medium or high.</small>
+          </span>
+        </label>
+
+        <label class="toggle">
+          <input id="auto-rescan-enabled" type="checkbox" />
+          <span>
+            <strong>Auto-rescan changing pages</strong>
+            <small>Re-run analysis when Gmail, Outlook, and other dynamic pages change.</small>
+          </span>
+        </label>
+
+        <div class="actions">
+          <button id="save-btn" class="primary-btn" type="button">Save Settings</button>
+          <button id="reset-btn" class="ghost-btn" type="button">Reset Defaults</button>
+          <span id="status" class="status">Ready</span>
+        </div>
+      </section>
+    </main>
+
+    <script src="options.js"></script>
+  </body>
+</html>

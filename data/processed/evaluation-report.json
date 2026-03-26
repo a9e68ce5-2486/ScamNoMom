@@ -1,0 +1,43 @@
+{
+  "generatedAt": "2026-03-26T22:21:45.033Z",
+  "summary": {
+    "includedRecords": 0,
+    "skippedRecords": 0
+  },
+  "warnThreshold": {
+    "threshold": 40,
+    "metrics": {
+      "total": 0,
+      "tp": 0,
+      "tn": 0,
+      "fp": 0,
+      "fn": 0,
+      "accuracy": 0,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "falsePositiveRate": 0,
+      "falseNegativeRate": 0
+    },
+    "bySource": {},
+    "byProvider": {}
+  },
+  "blockThreshold": {
+    "threshold": 70,
+    "metrics": {
+      "total": 0,
+      "tp": 0,
+      "tn": 0,
+      "fp": 0,
+      "fn": 0,
+      "accuracy": 0,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "falsePositiveRate": 0,
+      "falseNegativeRate": 0
+    },
+    "bySource": {},
+    "byProvider": {}
+  }
+}
