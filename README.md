@@ -51,7 +51,7 @@ The backend rule engine checks for high-signal phishing indicators such as:
 
 Rule logic lives in:
 
-- [rule-engine.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/pipeline/rule-engine.ts)
+- [rule-engine.ts](./apps/api/src/pipeline/rule-engine.ts)
 
 ### 2. LLM-Based Semantic Analysis
 
@@ -71,14 +71,14 @@ LLM analysis evaluates:
 
 LLM logic lives in:
 
-- [llm-analyzer.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/pipeline/llm-analyzer.ts)
+- [llm-analyzer.ts](./apps/api/src/pipeline/llm-analyzer.ts)
 
 ### 3. Taiwan-Specific Scam Adaptation
 
 The project is explicitly adapted for Taiwan scam patterns using:
 
-- Taiwan brand whitelist: [tw_brand_domains.json](/Users/shenghung/MyGitHub/ScamNoMom/data/tw_brand_domains.json)
-- Taiwan scam keyword sets: [tw_scam_keywords.json](/Users/shenghung/MyGitHub/ScamNoMom/data/tw_scam_keywords.json)
+- Taiwan brand whitelist: [tw_brand_domains.json](./data/tw_brand_domains.json)
+- Taiwan scam keyword sets: [tw_scam_keywords.json](./data/tw_scam_keywords.json)
 
 This enables detection of:
 
@@ -102,7 +102,7 @@ The extension extracts:
 
 Feature extraction lives in:
 
-- [content.js](/Users/shenghung/MyGitHub/ScamNoMom/apps/extension/content.js)
+- [content.js](./apps/extension/content.js)
 
 ### 5. Human-in-the-Loop Learning
 
@@ -340,7 +340,7 @@ Available endpoints:
 
 Create `apps/api/.env` from:
 
-- [`.env.example`](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/.env.example)
+- [`.env.example`](./apps/api/.env.example)
 
 OpenAI mode:
 
@@ -372,7 +372,7 @@ If no model is available, the backend falls back to the local heuristic analyzer
 2. Enable Developer Mode
 3. Click `Load unpacked`
 4. Select:
-   - `/Users/shenghung/MyGitHub/ScamNoMom/apps/extension`
+   - `./apps/extension`
 
 ### 4. Test It
 
@@ -407,7 +407,7 @@ node scripts/prepare_dataset.mjs
 
 Output:
 
-- [training-samples.json](/Users/shenghung/MyGitHub/ScamNoMom/data/processed/training-samples.json)
+- [training-samples.json](./data/processed/training-samples.json)
 
 ### Auto-Fetch Public Feeds
 
@@ -430,7 +430,7 @@ node scripts/mine_tw_scam_patterns.mjs
 
 Output:
 
-- [tw_scam_pattern_candidates.json](/Users/shenghung/MyGitHub/ScamNoMom/data/processed/tw_scam_pattern_candidates.json)
+- [tw_scam_pattern_candidates.json](./data/processed/tw_scam_pattern_candidates.json)
 
 This produces:
 
@@ -444,7 +444,7 @@ This produces:
 
 Edit:
 
-- [tw_scam_pattern_approvals.json](/Users/shenghung/MyGitHub/ScamNoMom/data/processed/tw_scam_pattern_approvals.json)
+- [tw_scam_pattern_approvals.json](./data/processed/tw_scam_pattern_approvals.json)
 
 Then run:
 
@@ -454,7 +454,7 @@ node scripts/promote_keywords.mjs
 
 This safely merges approved items into:
 
-- [tw_scam_keywords.json](/Users/shenghung/MyGitHub/ScamNoMom/data/tw_scam_keywords.json)
+- [tw_scam_keywords.json](./data/tw_scam_keywords.json)
 
 ### Generate Local Dashboard
 
@@ -464,7 +464,7 @@ node scripts/generate_tw_dashboard.mjs
 
 Output:
 
-- [tw_dashboard.html](/Users/shenghung/MyGitHub/ScamNoMom/data/processed/tw_dashboard.html)
+- [tw_dashboard.html](./data/processed/tw_dashboard.html)
 
 The dashboard includes:
 
@@ -492,11 +492,11 @@ node scripts/run_pipeline.mjs --skip-fetch
 
 ## Files You’ll Likely Edit Most
 
-- [tw_scam_keywords.json](/Users/shenghung/MyGitHub/ScamNoMom/data/tw_scam_keywords.json)
-- [tw_brand_domains.json](/Users/shenghung/MyGitHub/ScamNoMom/data/tw_brand_domains.json)
-- [content.js](/Users/shenghung/MyGitHub/ScamNoMom/apps/extension/content.js)
-- [rule-engine.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/pipeline/rule-engine.ts)
-- [llm-analyzer.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/pipeline/llm-analyzer.ts)
+- [tw_scam_keywords.json](./data/tw_scam_keywords.json)
+- [tw_brand_domains.json](./data/tw_brand_domains.json)
+- [content.js](./apps/extension/content.js)
+- [rule-engine.ts](./apps/api/src/pipeline/rule-engine.ts)
+- [llm-analyzer.ts](./apps/api/src/pipeline/llm-analyzer.ts)
 
 ## What Has Been Built So Far
 
@@ -532,4 +532,4 @@ node scripts/run_pipeline.mjs --skip-fetch
 
 For practical installation and daily automation, see:
 
-- [INSTALL.md](/Users/shenghung/MyGitHub/ScamNoMom/INSTALL.md)
+- [INSTALL.md](./INSTALL.md)

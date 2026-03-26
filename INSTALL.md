@@ -65,7 +65,7 @@ node scripts/setup.mjs --provider auto --skip-install
 
 Environment file:
 
-- [`.env.example`](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/.env.example)
+- [`.env.example`](./apps/api/.env.example)
 - `apps/api/.env`
 
 ### Ollama
@@ -139,7 +139,7 @@ Check the API:
 1. Open `chrome://extensions`
 2. Enable `Developer mode`
 3. Click `Load unpacked`
-4. Select [apps/extension](/Users/shenghung/MyGitHub/ScamNoMom/apps/extension)
+4. Select [apps/extension](./apps/extension)
 
 ## 6. Configure the Extension Without Editing Code
 
@@ -203,7 +203,7 @@ node scripts/generate_tw_dashboard.mjs
 
 Dashboard output:
 
-- [tw_dashboard.html](/Users/shenghung/MyGitHub/ScamNoMom/data/processed/tw_dashboard.html)
+- [tw_dashboard.html](./data/processed/tw_dashboard.html)
 
 ## 9. Install Daily Auto-Update
 

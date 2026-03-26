@@ -51,7 +51,7 @@ Backend rule engine 會檢查高訊號風險特徵，例如：
 
 規則邏輯在：
 
-- [rule-engine.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/pipeline/rule-engine.ts)
+- [rule-engine.ts](./apps/api/src/pipeline/rule-engine.ts)
 
 ### 2. LLM 語意分析
 
@@ -71,14 +71,14 @@ LLM 主要分析：
 
 邏輯在：
 
-- [llm-analyzer.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/pipeline/llm-analyzer.ts)
+- [llm-analyzer.ts](./apps/api/src/pipeline/llm-analyzer.ts)
 
 ### 3. 台灣詐騙場景調整
 
 專案已針對台灣常見詐騙型態做調整，包含：
 
-- 台灣品牌官方網域白名單：[tw_brand_domains.json](/Users/shenghung/MyGitHub/ScamNoMom/data/tw_brand_domains.json)
-- 台灣詐騙關鍵詞詞庫：[tw_scam_keywords.json](/Users/shenghung/MyGitHub/ScamNoMom/data/tw_scam_keywords.json)
+- 台灣品牌官方網域白名單：[tw_brand_domains.json](./data/tw_brand_domains.json)
+- 台灣詐騙關鍵詞詞庫：[tw_scam_keywords.json](./data/tw_scam_keywords.json)
 
 因此能更好辨識：
 
@@ -102,7 +102,7 @@ Extension 會擷取：
 
 特徵擷取在：
 
-- [content.js](/Users/shenghung/MyGitHub/ScamNoMom/apps/extension/content.js)
+- [content.js](./apps/extension/content.js)
 
 ### 5. Human-in-the-Loop Learning
 
@@ -152,7 +152,7 @@ Extension popup 支援：
 
 目前實作中的架構說明可參考：
 
-- [docs/current-architecture.zh-TW.md](/Users/shenghung/MyGitHub/ScamNoMom/docs/current-architecture.zh-TW.md)
+- [docs/current-architecture.zh-TW.md](./docs/current-architecture.zh-TW.md)
 
 ## 目前功能
 
@@ -344,7 +344,7 @@ npm run dev
 
 從下列檔案建立 `apps/api/.env`：
 
-- [`.env.example`](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/.env.example)
+- [`.env.example`](./apps/api/.env.example)
 
 OpenAI 模式：
 
@@ -376,7 +376,7 @@ LLM_PROVIDER=auto
 2. 啟用 `Developer Mode`
 3. 點選 `Load unpacked`
 4. 選擇：
-   - `/Users/shenghung/MyGitHub/ScamNoMom/apps/extension`
+   - `./apps/extension`
 
 ### 4. 測試
 
@@ -405,7 +405,7 @@ LLM_PROVIDER=auto
 
 資料整理與腳本說明請看：
 
-- [data/README.zh-TW.md](/Users/shenghung/MyGitHub/ScamNoMom/data/README.zh-TW.md)
+- [data/README.zh-TW.md](./data/README.zh-TW.md)
 
 ### Evaluation
 
@@ -417,8 +417,8 @@ npm run evaluate
 
 輸出：
 
-- [evaluation-report.json](/Users/shenghung/MyGitHub/ScamNoMom/data/processed/evaluation-report.json)
-- [evaluation-report.md](/Users/shenghung/MyGitHub/ScamNoMom/data/processed/evaluation-report.md)
+- [evaluation-report.json](./data/processed/evaluation-report.json)
+- [evaluation-report.md](./data/processed/evaluation-report.md)
 
 ### Rule Auto-Tuning
 
@@ -430,11 +430,11 @@ npm run tune:rules
 
 輸出：
 
-- [rule-weight-suggestions.json](/Users/shenghung/MyGitHub/ScamNoMom/data/processed/rule-weight-suggestions.json)
-- [rule_weights.json](/Users/shenghung/MyGitHub/ScamNoMom/data/rule_weights.json)
+- [rule-weight-suggestions.json](./data/processed/rule-weight-suggestions.json)
+- [rule_weights.json](./data/rule_weights.json)
 
 ### 一鍵啟動與安裝
 
 如果你要的是實際安裝與使用方式，請看：
 
-- [INSTALL.zh-TW.md](/Users/shenghung/MyGitHub/ScamNoMom/INSTALL.zh-TW.md)
+- [INSTALL.zh-TW.md](./INSTALL.zh-TW.md)

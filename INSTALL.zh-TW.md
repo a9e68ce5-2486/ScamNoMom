@@ -65,7 +65,7 @@ node scripts/setup.mjs --provider auto --skip-install
 
 環境檔案：
 
-- [`.env.example`](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/.env.example)
+- [`.env.example`](./apps/api/.env.example)
 - `apps/api/.env`
 
 ### Ollama
@@ -139,7 +139,7 @@ npm run api:start:dev
 1. 打開 `chrome://extensions`
 2. 開啟 `Developer mode`
 3. 點選 `Load unpacked`
-4. 選擇 [apps/extension](/Users/shenghung/MyGitHub/ScamNoMom/apps/extension)
+4. 選擇 [apps/extension](./apps/extension)
 
 ## 6. 不改程式碼也能設定 Extension
 
@@ -203,7 +203,7 @@ node scripts/generate_tw_dashboard.mjs
 
 Dashboard 輸出：
 
-- [tw_dashboard.html](/Users/shenghung/MyGitHub/ScamNoMom/data/processed/tw_dashboard.html)
+- [tw_dashboard.html](./data/processed/tw_dashboard.html)
 
 ## 9. 安裝每日自動更新
 

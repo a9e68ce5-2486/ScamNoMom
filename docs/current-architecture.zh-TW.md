@@ -57,7 +57,7 @@ scripts/
 
 檔案：
 
-- [content.js](/Users/shenghung/MyGitHub/ScamNoMom/apps/extension/content.js)
+- [content.js](../apps/extension/content.js)
 
 職責：
 
@@ -80,7 +80,7 @@ scripts/
 
 檔案：
 
-- [service-worker.js](/Users/shenghung/MyGitHub/ScamNoMom/apps/extension/service-worker.js)
+- [service-worker.js](../apps/extension/service-worker.js)
 
 職責：
 
@@ -99,9 +99,9 @@ scripts/
 
 檔案：
 
-- [popup.html](/Users/shenghung/MyGitHub/ScamNoMom/apps/extension/popup.html)
-- [popup.css](/Users/shenghung/MyGitHub/ScamNoMom/apps/extension/popup.css)
-- [popup.js](/Users/shenghung/MyGitHub/ScamNoMom/apps/extension/popup.js)
+- [popup.html](../apps/extension/popup.html)
+- [popup.css](../apps/extension/popup.css)
+- [popup.js](../apps/extension/popup.js)
 
 功能：
 
@@ -120,9 +120,9 @@ scripts/
 
 檔案：
 
-- [options.html](/Users/shenghung/MyGitHub/ScamNoMom/apps/extension/options.html)
-- [options.css](/Users/shenghung/MyGitHub/ScamNoMom/apps/extension/options.css)
-- [options.js](/Users/shenghung/MyGitHub/ScamNoMom/apps/extension/options.js)
+- [options.html](../apps/extension/options.html)
+- [options.css](../apps/extension/options.css)
+- [options.js](../apps/extension/options.js)
 
 功能：
 
@@ -136,7 +136,7 @@ scripts/
 
 檔案：
 
-- [server.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/server.ts)
+- [server.ts](../apps/api/src/server.ts)
 
 目前提供：
 
@@ -151,7 +151,7 @@ scripts/
 
 檔案：
 
-- [analyze.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/routes/analyze.ts)
+- [analyze.ts](../apps/api/src/routes/analyze.ts)
 
 功能：
 
@@ -178,7 +178,7 @@ scripts/
 
 檔案：
 
-- [feedback.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/routes/feedback.ts)
+- [feedback.ts](../apps/api/src/routes/feedback.ts)
 
 功能：
 
@@ -198,7 +198,7 @@ scripts/
 
 檔案：
 
-- [analyze.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/pipeline/analyze.ts)
+- [analyze.ts](../apps/api/src/pipeline/analyze.ts)
 
 目前主流程：
 
@@ -216,7 +216,7 @@ PageFeatures
 
 檔案：
 
-- [rule-engine.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/pipeline/rule-engine.ts)
+- [rule-engine.ts](../apps/api/src/pipeline/rule-engine.ts)
 
 負責：
 
@@ -240,7 +240,7 @@ PageFeatures
 
 檔案：
 
-- [llm-analyzer.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/pipeline/llm-analyzer.ts)
+- [llm-analyzer.ts](../apps/api/src/pipeline/llm-analyzer.ts)
 
 支援 provider：
 
@@ -269,7 +269,7 @@ PageFeatures
 
 檔案：
 
-- [router.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/pipeline/router.ts)
+- [router.ts](../apps/api/src/pipeline/router.ts)
 
 目前規則：
 
@@ -281,7 +281,7 @@ PageFeatures
 
 檔案：
 
-- [agent-analyzer.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/pipeline/agent-analyzer.ts)
+- [agent-analyzer.ts](../apps/api/src/pipeline/agent-analyzer.ts)
 
 這是目前已落地的第二階段深度分析骨架。  
 當初步分數落在中風險區間時，系統會進一步檢查：
@@ -329,8 +329,8 @@ Final Score = 0.4 * Rule Score + 0.6 * LLM Score
 
 檔案：
 
-- [tw-brand-domains.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/config/tw-brand-domains.ts)
-- [tw_brand_domains.json](/Users/shenghung/MyGitHub/ScamNoMom/data/tw_brand_domains.json)
+- [tw-brand-domains.ts](../apps/api/src/config/tw-brand-domains.ts)
+- [tw_brand_domains.json](../data/tw_brand_domains.json)
 
 用途：
 
@@ -343,8 +343,8 @@ Final Score = 0.4 * Rule Score + 0.6 * LLM Score
 
 檔案：
 
-- [tw-scam-keywords.ts](/Users/shenghung/MyGitHub/ScamNoMom/apps/api/src/config/tw-scam-keywords.ts)
-- [tw_scam_keywords.json](/Users/shenghung/MyGitHub/ScamNoMom/data/tw_scam_keywords.json)
+- [tw-scam-keywords.ts](../apps/api/src/config/tw-scam-keywords.ts)
+- [tw_scam_keywords.json](../data/tw_scam_keywords.json)
 
 目前分類：
 
@@ -371,12 +371,12 @@ Final Score = 0.4 * Rule Score + 0.6 * LLM Score
 
 主要腳本：
 
-- [fetch_feeds.mjs](/Users/shenghung/MyGitHub/ScamNoMom/scripts/fetch_feeds.mjs)
-- [prepare_dataset.mjs](/Users/shenghung/MyGitHub/ScamNoMom/scripts/prepare_dataset.mjs)
-- [mine_tw_scam_patterns.mjs](/Users/shenghung/MyGitHub/ScamNoMom/scripts/mine_tw_scam_patterns.mjs)
-- [promote_keywords.mjs](/Users/shenghung/MyGitHub/ScamNoMom/scripts/promote_keywords.mjs)
-- [generate_tw_dashboard.mjs](/Users/shenghung/MyGitHub/ScamNoMom/scripts/generate_tw_dashboard.mjs)
-- [evaluate_dataset.mjs](/Users/shenghung/MyGitHub/ScamNoMom/scripts/evaluate_dataset.mjs)
+- [fetch_feeds.mjs](../scripts/fetch_feeds.mjs)
+- [prepare_dataset.mjs](../scripts/prepare_dataset.mjs)
+- [mine_tw_scam_patterns.mjs](../scripts/mine_tw_scam_patterns.mjs)
+- [promote_keywords.mjs](../scripts/promote_keywords.mjs)
+- [generate_tw_dashboard.mjs](../scripts/generate_tw_dashboard.mjs)
+- [evaluate_dataset.mjs](../scripts/evaluate_dataset.mjs)
 
 功能：
 
