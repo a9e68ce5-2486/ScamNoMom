@@ -1,0 +1,179 @@
+[
+  {
+    "id": "web_phish_login_brand_mismatch",
+    "kind": "page",
+    "label": "phishing",
+    "minScore": 70,
+    "expectedAction": "block",
+    "features": {
+      "url": "https://secure-paypal-login-check.top/verify",
+      "hostname": "secure-paypal-login-check.top",
+      "source": "web",
+      "title": "PayPal Secure Verification",
+      "visibleText": "PayPal 帳戶異常，請立即登入驗證您的帳戶避免停用。",
+      "forms": {
+        "total": 1,
+        "passwordFields": 1,
+        "externalSubmitCount": 1
+      },
+      "links": {
+        "total": 3,
+        "mismatchedTextCount": 1,
+        "suspiciousTldCount": 2,
+        "hostnames": ["secure-paypal-login-check.top", "tinyurl.com", "secure-paypal-login-check.top"],
+        "urls": [
+          "https://secure-paypal-login-check.top/verify",
+          "https://tinyurl.com/paypal-security-check",
+          "https://secure-paypal-login-check.top/login"
+        ]
+      },
+      "dom": {
+        "hiddenElementCount": 6,
+        "iframeCount": 3
+      },
+      "brandSignals": ["paypal"]
+    }
+  },
+  {
+    "id": "web_safe_corporate_homepage",
+    "kind": "page",
+    "label": "safe",
+    "maxScore": 39,
+    "expectedAction": "allow",
+    "features": {
+      "url": "https://www.mozilla.org/",
+      "hostname": "www.mozilla.org",
+      "source": "web",
+      "title": "Internet for people, not profit",
+      "visibleText": "Mozilla builds browsers and products that put people first.",
+      "forms": {
+        "total": 0,
+        "passwordFields": 0,
+        "externalSubmitCount": 0
+      },
+      "links": {
+        "total": 4,
+        "mismatchedTextCount": 0,
+        "suspiciousTldCount": 0,
+        "hostnames": ["www.mozilla.org", "support.mozilla.org"],
+        "urls": [
+          "https://www.mozilla.org/",
+          "https://support.mozilla.org/"
+        ]
+      },
+      "dom": {
+        "hiddenElementCount": 0,
+        "iframeCount": 0
+      },
+      "brandSignals": []
+    }
+  },
+  {
+    "id": "email_fake_logistics",
+    "kind": "page",
+    "label": "phishing",
+    "minScore": 80,
+    "expectedAction": "block",
+    "features": {
+      "url": "https://mail.google.com/mail/u/0/#inbox/fake1",
+      "hostname": "mail.google.com",
+      "source": "email",
+      "title": "黑貓宅急便通知",
+      "visibleText": "包裹配送失敗，請重新安排配送。",
+      "forms": {
+        "total": 0,
+        "passwordFields": 0,
+        "externalSubmitCount": 0
+      },
+      "links": {
+        "total": 4,
+        "mismatchedTextCount": 1,
+        "suspiciousTldCount": 1,
+        "hostnames": ["delivery-check.work", "bit.ly", "delivery-check.work"],
+        "urls": [
+          "https://delivery-check.work/retry",
+          "https://bit.ly/retry-package",
+          "https://delivery-check.work/payment"
+        ]
+      },
+      "dom": {
+        "hiddenElementCount": 0,
+        "iframeCount": 0
+      },
+      "brandSignals": ["黑貓"],
+      "email": {
+        "provider": "gmail",
+        "subject": "黑貓宅急便: 包裹異常，請立即確認",
+        "sender": "黑貓宅急便 <support.package.notice@gmail.com>",
+        "replyTo": "help@delivery-check.work",
+        "bodyText": "您的包裹因地址異常配送失敗，請立即重新登入安排配送，避免退件。",
+        "linkCount": 4
+      }
+    }
+  },
+  {
+    "id": "email_safe_newsletter",
+    "kind": "page",
+    "label": "safe",
+    "maxScore": 39,
+    "expectedAction": "allow",
+    "features": {
+      "url": "https://outlook.office.com/mail/safe1",
+      "hostname": "outlook.office.com",
+      "source": "email",
+      "title": "產品更新通知",
+      "visibleText": "查看本月服務更新與公告。",
+      "forms": {
+        "total": 0,
+        "passwordFields": 0,
+        "externalSubmitCount": 0
+      },
+      "links": {
+        "total": 2,
+        "mismatchedTextCount": 0,
+        "suspiciousTldCount": 0,
+        "hostnames": ["newsletter.example.com"],
+        "urls": [
+          "https://newsletter.example.com/update"
+        ]
+      },
+      "dom": {
+        "hiddenElementCount": 0,
+        "iframeCount": 0
+      },
+      "brandSignals": [],
+      "email": {
+        "provider": "outlook",
+        "subject": "Monthly product updates",
+        "sender": "Example Updates <news@example.com>",
+        "replyTo": "news@example.com",
+        "bodyText": "This is our monthly update about new features and service improvements.",
+        "linkCount": 1
+      }
+    }
+  },
+  {
+    "id": "text_phone_transfer_scam",
+    "kind": "text",
+    "label": "phishing",
+    "minScore": 50,
+    "expectedAction": "warn",
+    "input": {
+      "source": "text",
+      "channel": "phone_transcript",
+      "text": "這裡是銀行客服，您的帳戶遭到異常扣款，請不要掛電話，現在去ATM依照指示解除分期並提供驗證碼。"
+    }
+  },
+  {
+    "id": "text_safe_notice",
+    "kind": "text",
+    "label": "safe",
+    "maxScore": 39,
+    "expectedAction": "allow",
+    "input": {
+      "source": "text",
+      "channel": "manual_report",
+      "text": "明天下午三點開會，請記得帶筆電和上週的報告。"
+    }
+  }
+]

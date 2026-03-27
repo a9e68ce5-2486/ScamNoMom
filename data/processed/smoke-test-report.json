@@ -1,0 +1,70 @@
+{
+  "generatedAt": "2026-03-27T00:18:09.313Z",
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0
+  },
+  "results": [
+    {
+      "id": "web_phish_login_brand_mismatch",
+      "kind": "page",
+      "label": "phishing",
+      "passed": true,
+      "expectedAction": "block",
+      "actualAction": "block",
+      "score": 83,
+      "attackType": "credential_harvest"
+    },
+    {
+      "id": "web_safe_corporate_homepage",
+      "kind": "page",
+      "label": "safe",
+      "passed": true,
+      "expectedAction": "allow",
+      "actualAction": "allow",
+      "score": 6,
+      "attackType": "unknown"
+    },
+    {
+      "id": "email_fake_logistics",
+      "kind": "page",
+      "label": "phishing",
+      "passed": true,
+      "expectedAction": "block",
+      "actualAction": "block",
+      "score": 100,
+      "attackType": "credential_harvest"
+    },
+    {
+      "id": "email_safe_newsletter",
+      "kind": "page",
+      "label": "safe",
+      "passed": true,
+      "expectedAction": "allow",
+      "actualAction": "allow",
+      "score": 9,
+      "attackType": "unknown"
+    },
+    {
+      "id": "text_phone_transfer_scam",
+      "kind": "text",
+      "label": "phishing",
+      "passed": true,
+      "expectedAction": "warn",
+      "actualAction": "warn",
+      "score": 53,
+      "attackType": "customer_service_scam"
+    },
+    {
+      "id": "text_safe_notice",
+      "kind": "text",
+      "label": "safe",
+      "passed": true,
+      "expectedAction": "allow",
+      "actualAction": "allow",
+      "score": 0,
+      "attackType": "unknown"
+    }
+  ]
+}

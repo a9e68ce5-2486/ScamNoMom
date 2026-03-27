@@ -23,7 +23,7 @@ Fastest local setup:
 
 ```bash
 cd /path/to/ScamNoMom
-npm run setup:ollama
+npm run setup
 npm run start
 ```
 
@@ -38,11 +38,19 @@ This is the simplest path for a normal local user:
 - start the local API
 - use the extension popup and settings page
 
+You can also use the launcher files directly:
+
+- macOS/Linux setup: `setup-scamnomom.command` or `setup-scamnomom.sh`
+- Windows setup: `setup-scamnomom.bat`
+- macOS/Linux start: `start-scamnomom.command` or `start-scamnomom.sh`
+- Windows start: `start-scamnomom.bat`
+
 ## 2. Setup Commands
 
 Choose the provider you want:
 
 ```bash
+npm run setup
 npm run setup:ollama
 npm run setup:openai
 npm run setup:auto
@@ -108,7 +116,23 @@ This will try:
 2. Ollama
 3. local heuristic fallback
 
-## 4. Start the Local System
+## 4. Quick Health Check
+
+Run a basic environment check:
+
+```bash
+npm run doctor
+```
+
+This checks:
+
+- `node`
+- `npm`
+- `apps/api/.env`
+- `apps/api/node_modules`
+- `ollama` availability when relevant
+
+## 5. Start the Local System
 
 Normal startup:
 
@@ -134,14 +158,14 @@ Check the API:
 - `http://localhost:8787/`
 - `http://localhost:8787/health`
 
-## 5. Load the Extension
+## 6. Load the Extension
 
 1. Open `chrome://extensions`
 2. Enable `Developer mode`
 3. Click `Load unpacked`
 4. Select [apps/extension](./apps/extension)
 
-## 6. Configure the Extension Without Editing Code
+## 7. Configure the Extension Without Editing Code
 
 The extension now includes a built-in settings page.
 
@@ -158,7 +182,7 @@ Available settings:
 
 This means normal users do not need to edit `.js` files or hardcode localhost values in the extension.
 
-## 7. What the Extension Can Check
+## 8. What the Extension Can Check
 
 Current coverage includes:
 
@@ -178,7 +202,27 @@ Current UI features include:
 - feedback collection
 - Taiwan-focused rule checks
 
-## 8. Daily Intelligence Pipeline
+## 9. Tests and Benchmarks
+
+Smoke test:
+
+```bash
+npm run test:smoke
+```
+
+Benchmark report:
+
+```bash
+npm run benchmark
+```
+
+Outputs:
+
+- [smoke-test-report.json](./data/processed/smoke-test-report.json)
+- [benchmark-report.json](./data/processed/benchmark-report.json)
+- [benchmark-report.md](./data/processed/benchmark-report.md)
+
+## 10. Daily Intelligence Pipeline
 
 Run the full local intelligence pipeline:
 
@@ -205,7 +249,7 @@ Dashboard output:
 
 - [tw_dashboard.html](./data/processed/tw_dashboard.html)
 
-## 9. Install Daily Auto-Update
+## 11. Install Daily Auto-Update
 
 Install the cross-platform daily pipeline scheduler:
 

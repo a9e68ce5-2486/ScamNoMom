@@ -27,6 +27,13 @@ ScamNoMom 是一個混合式的釣魚與詐騙偵測專案，重點支援：
 - Yahoo Mail
 - Proton Mail
 
+目前也內建：
+
+- smoke test
+- benchmark dataset 與 benchmark report
+- `doctor` 環境檢查
+- 可直接雙擊的安裝 / 啟動 wrapper
+
 整體偵測流程如下：
 
 1. 在瀏覽器端擷取頁面或郵件特徵

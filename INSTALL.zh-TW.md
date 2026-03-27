@@ -23,7 +23,7 @@
 
 ```bash
 cd /path/to/ScamNoMom
-npm run setup:ollama
+npm run setup
 npm run start
 ```
 
@@ -38,11 +38,19 @@ npm run start
 - 啟動本地 API
 - 用 extension popup 與設定頁操作
 
+也可以直接用啟動檔：
+
+- macOS/Linux 安裝：`setup-scamnomom.command` 或 `setup-scamnomom.sh`
+- Windows 安裝：`setup-scamnomom.bat`
+- macOS/Linux 啟動：`start-scamnomom.command` 或 `start-scamnomom.sh`
+- Windows 啟動：`start-scamnomom.bat`
+
 ## 2. Setup 指令
 
 依照你想用的 provider 選一個：
 
 ```bash
+npm run setup
 npm run setup:ollama
 npm run setup:openai
 npm run setup:auto
@@ -108,7 +116,23 @@ LLM_PROVIDER=auto
 2. Ollama
 3. local heuristic fallback
 
-## 4. 啟動本地系統
+## 4. 快速環境檢查
+
+執行基本環境診斷：
+
+```bash
+npm run doctor
+```
+
+會檢查：
+
+- `node`
+- `npm`
+- `apps/api/.env`
+- `apps/api/node_modules`
+- 若有需要也會檢查 `ollama`
+
+## 5. 啟動本地系統
 
 一般啟動：
 
@@ -134,14 +158,14 @@ npm run api:start:dev
 - `http://localhost:8787/`
 - `http://localhost:8787/health`
 
-## 5. 載入 Extension
+## 6. 載入 Extension
 
 1. 打開 `chrome://extensions`
 2. 開啟 `Developer mode`
 3. 點選 `Load unpacked`
 4. 選擇 [apps/extension](./apps/extension)
 
-## 6. 不改程式碼也能設定 Extension
+## 7. 不改程式碼也能設定 Extension
 
 Extension 現在內建設定頁。
 
@@ -158,7 +182,7 @@ Extension 現在內建設定頁。
 
 這樣一般使用者不需要改 `.js` 檔，也不必手動硬編 localhost。
 
-## 7. Extension 目前能檢查什麼
+## 8. Extension 目前能檢查什麼
 
 目前支援：
 
@@ -178,7 +202,27 @@ Extension 現在內建設定頁。
 - feedback 收集
 - 台灣場景規則偵測
 
-## 8. 每日 intelligence pipeline
+## 9. 測試與 Benchmark
+
+Smoke test：
+
+```bash
+npm run test:smoke
+```
+
+Benchmark 報表：
+
+```bash
+npm run benchmark
+```
+
+輸出：
+
+- [smoke-test-report.json](./data/processed/smoke-test-report.json)
+- [benchmark-report.json](./data/processed/benchmark-report.json)
+- [benchmark-report.md](./data/processed/benchmark-report.md)
+
+## 10. 每日 intelligence pipeline
 
 執行完整本地資料流程：
 
@@ -205,7 +249,7 @@ Dashboard 輸出：
 
 - [tw_dashboard.html](./data/processed/tw_dashboard.html)
 
-## 9. 安裝每日自動更新
+## 11. 安裝每日自動更新
 
 安裝跨平台每日 pipeline 排程：
 

@@ -6,7 +6,15 @@ const DIST_DIR = path.join(ROOT, "dist", "scamnomom-portable");
 
 const COPY_TARGETS = [
   "README.md",
+  "README.zh-TW.md",
   "INSTALL.md",
+  "INSTALL.zh-TW.md",
+  "setup-scamnomom.sh",
+  "setup-scamnomom.command",
+  "setup-scamnomom.bat",
+  "start-scamnomom.sh",
+  "start-scamnomom.command",
+  "start-scamnomom.bat",
   "package.json",
   "apps/api/package.json",
   "apps/api/package-lock.json",
@@ -15,6 +23,8 @@ const COPY_TARGETS = [
   "apps/api/src",
   "apps/extension",
   "data/README.md",
+  "data/README.zh-TW.md",
+  "data/benchmarks",
   "data/schemas",
   "data/tw_brand_domains.json",
   "data/tw_scam_keywords.json",
@@ -32,7 +42,9 @@ async function writeLauncherFiles() {
     "start-scamnomom.sh",
     "start-scamnomom.command",
     "setup-ollama.sh",
-    "setup-ollama.command"
+    "setup-ollama.command",
+    "setup-scamnomom.sh",
+    "setup-scamnomom.command"
   ];
 
   const unixLauncher = `#!/usr/bin/env bash
@@ -52,9 +64,20 @@ cd "$(dirname "$0")"
 npm run setup:ollama
 `;
 
+  const setupAutoUnix = `#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
+npm run setup
+`;
+
   const setupOllamaWindows = `@echo off
 cd /d %~dp0
 npm run setup:ollama
+`;
+
+  const setupAutoWindows = `@echo off
+cd /d %~dp0
+npm run setup
 `;
 
   const releaseReadme = `ScamNoMom Portable Bundle
@@ -66,7 +89,11 @@ Quick start
 4. Use the extension Settings page to confirm the API URL.
 
 Main commands
+- npm run setup
 - npm run start
+- npm run doctor
+- npm run test:smoke
+- npm run benchmark
 - npm run service:install
 - npm run schedule:install
 `;
@@ -77,6 +104,9 @@ Main commands
   await writeFile(path.join(DIST_DIR, "setup-ollama.sh"), setupOllamaUnix);
   await writeFile(path.join(DIST_DIR, "setup-ollama.command"), setupOllamaUnix);
   await writeFile(path.join(DIST_DIR, "setup-ollama.bat"), setupOllamaWindows);
+  await writeFile(path.join(DIST_DIR, "setup-scamnomom.sh"), setupAutoUnix);
+  await writeFile(path.join(DIST_DIR, "setup-scamnomom.command"), setupAutoUnix);
+  await writeFile(path.join(DIST_DIR, "setup-scamnomom.bat"), setupAutoWindows);
   await writeFile(path.join(DIST_DIR, "PORTABLE_BUNDLE.md"), releaseReadme);
 
   for (const file of unixFiles) {
