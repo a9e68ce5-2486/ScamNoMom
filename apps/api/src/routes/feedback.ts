@@ -4,7 +4,7 @@ import { Router } from "express";
 import { z } from "zod";
 
 const analysisSchema = z.object({
-  source: z.enum(["web", "email"]),
+  source: z.enum(["web", "email", "text"]),
   riskLevel: z.enum(["low", "medium", "high"]),
   score: z.number().min(0).max(100),
   reasons: z.array(z.string()),
@@ -14,6 +14,11 @@ const analysisSchema = z.object({
     "brand_impersonation",
     "malware_delivery",
     "payment_fraud",
+    "investment_scam",
+    "customer_service_scam",
+    "government_impersonation",
+    "romance_scam",
+    "phone_scam",
     "unknown"
   ]),
   recommendedAction: z.enum(["allow", "warn", "escalate", "block"]),
@@ -32,8 +37,61 @@ const analysisSchema = z.object({
           "brand_impersonation",
           "malware_delivery",
           "payment_fraud",
+          "investment_scam",
+          "customer_service_scam",
+          "government_impersonation",
+          "romance_scam",
+          "phone_scam",
           "unknown"
         ])
+        .optional(),
+      redirectFindings: z
+        .array(
+          z.object({
+            originalUrl: z.string(),
+            finalUrl: z.string(),
+            hopCount: z.number().int().min(0)
+          })
+        )
+        .optional(),
+      threatIntel: z
+        .object({
+          checkedHostnames: z.array(z.string()),
+          blacklistMatches: z.array(z.string()),
+          riskyIpHosts: z.array(z.string()),
+          dnsFindings: z.array(
+            z.object({
+              hostname: z.string(),
+              aRecordCount: z.number().int().min(0),
+              nsRecordCount: z.number().int().min(0),
+              mxRecordCount: z.number().int().min(0),
+              hasSpfRecord: z.boolean(),
+              lookupError: z.string().optional()
+            })
+          ),
+          external: z
+            .object({
+              enabled: z.boolean(),
+              rdap: z
+                .object({
+                  hostname: z.string(),
+                  registrationDate: z.string().optional(),
+                  lastChangedDate: z.string().optional(),
+                  registrar: z.string().optional(),
+                  domainAgeDays: z.number().int().min(0).optional()
+                })
+                .optional(),
+              blacklist: z
+                .object({
+                  checked: z.boolean(),
+                  listed: z.boolean(),
+                  provider: z.string().optional(),
+                  reason: z.string().optional()
+                })
+                .optional()
+            })
+            .optional()
+        })
         .optional()
     })
     .optional(),

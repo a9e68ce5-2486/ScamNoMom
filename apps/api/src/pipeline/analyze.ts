@@ -64,7 +64,7 @@ export async function analyzeFeatures(features: PageFeatures): Promise<AnalysisR
     confidence: finalConfidence,
     attackType: finalAttackType,
     recommendedAction: finalDecision,
-    needsAgent: finalDecision === "escalate",
+    needsAgent: Boolean(agentResult),
     analyzedAt: new Date().toISOString(),
     provider: llmResult.provider,
     agent: agentResult ?? undefined,

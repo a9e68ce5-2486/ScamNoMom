@@ -303,6 +303,8 @@ PageFeatures
 - local phishing feed 命中比對
 - DNS 訊號檢查
 - sender domain 的 MX / SPF 基本觀察
+- 可選外部 RDAP domain profile 查詢
+- 可選 generic blacklist API 查詢
 
 ## 6. 風險分數與決策
 

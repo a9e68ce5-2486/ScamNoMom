@@ -105,6 +105,22 @@ export interface AnalysisResult {
         hasSpfRecord: boolean;
         lookupError?: string;
       }>;
+      external?: {
+        enabled: boolean;
+        rdap?: {
+          hostname: string;
+          registrationDate?: string;
+          lastChangedDate?: string;
+          registrar?: string;
+          domainAgeDays?: number;
+        };
+        blacklist?: {
+          checked: boolean;
+          listed: boolean;
+          provider?: string;
+          reason?: string;
+        };
+      };
     };
   };
   evidence: {

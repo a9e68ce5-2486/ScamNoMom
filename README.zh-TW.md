@@ -14,6 +14,7 @@ ScamNoMom 是一個混合式的釣魚與詐騙偵測專案，重點支援：
 - `Node.js + TypeScript` backend：負責風險評分與分析流程
 - `OpenAI` 或 `Ollama/Qwen`：負責語意分析
 - `Rule engine + feedback loop + dataset pipeline`：負責持續優化
+- `Local + optional external threat intel`：負責 DNS、feed、RDAP、blacklist second pass
 
 ## 專案目前能做什麼
 

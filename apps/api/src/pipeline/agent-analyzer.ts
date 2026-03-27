@@ -1,5 +1,6 @@
 import { findMismatchedBrandLinks, findMismatchedBrands } from "../config/tw-brand-domains.js";
 import { hasKeywordMatch } from "../config/tw-scam-keywords.js";
+import { runExternalThreatIntel } from "./external-threat-intel.js";
 import { resolveRedirectChain } from "./redirect-resolver.js";
 import { extractRuleSignals } from "./rule-signals.js";
 import { runThreatIntel } from "./threat-intel.js";
@@ -33,6 +34,22 @@ export interface AgentAnalyzerResult {
       hasSpfRecord: boolean;
       lookupError?: string;
     }>;
+    external?: {
+      enabled: boolean;
+      rdap?: {
+        hostname: string;
+        registrationDate?: string;
+        lastChangedDate?: string;
+        registrar?: string;
+        domainAgeDays?: number;
+      };
+      blacklist?: {
+        checked: boolean;
+        listed: boolean;
+        provider?: string;
+        reason?: string;
+      };
+    };
   };
 }
 
@@ -154,10 +171,16 @@ export async function runAgentAnalyzer(features: PageFeatures, input: AgentAnaly
     })
   ].filter(Boolean);
   const threatIntel = await runThreatIntel(threatIntelHosts, emailSenderDomain);
+  const externalThreatIntel = await runExternalThreatIntel(features.hostname);
 
   if (threatIntel.scoreDelta > 0) {
     score += threatIntel.scoreDelta;
     reasons.push(...threatIntel.reasons);
+  }
+
+  if (externalThreatIntel.scoreDelta > 0) {
+    score += externalThreatIntel.scoreDelta;
+    reasons.push(...externalThreatIntel.reasons);
   }
 
   if (hostnameRiskSignals >= 2) {
@@ -232,7 +255,12 @@ export async function runAgentAnalyzer(features: PageFeatures, input: AgentAnaly
       checkedHostnames: threatIntel.checkedHostnames,
       blacklistMatches: threatIntel.blacklistMatches,
       riskyIpHosts: threatIntel.riskyIpHosts,
-      dnsFindings: threatIntel.dnsFindings
+      dnsFindings: threatIntel.dnsFindings,
+      external: {
+        enabled: externalThreatIntel.enabled,
+        rdap: externalThreatIntel.rdap,
+        blacklist: externalThreatIntel.blacklist
+      }
     }
   };
 }
