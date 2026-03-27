@@ -1,5 +1,6 @@
 import { findMismatchedBrandLinks, findMismatchedBrands } from "../config/tw-brand-domains.js";
 import { hasKeywordMatch } from "../config/tw-scam-keywords.js";
+import { runEmailAuthIntel } from "./email-auth-intel.js";
 import { runExternalThreatIntel } from "./external-threat-intel.js";
 import { resolveRedirectChain } from "./redirect-resolver.js";
 import { extractRuleSignals } from "./rule-signals.js";
@@ -49,6 +50,15 @@ export interface AgentAnalyzerResult {
         provider?: string;
         reason?: string;
       };
+    };
+    emailAuth?: {
+      domain: string;
+      mxRecordCount: number;
+      hasSpfRecord: boolean;
+      hasDmarcRecord: boolean;
+      dmarcPolicy?: "none" | "quarantine" | "reject";
+      discoverableDkimSelectors: string[];
+      checkedDkimSelectors: string[];
     };
   };
 }
@@ -172,6 +182,8 @@ export async function runAgentAnalyzer(features: PageFeatures, input: AgentAnaly
   ].filter(Boolean);
   const threatIntel = await runThreatIntel(threatIntelHosts, emailSenderDomain);
   const externalThreatIntel = await runExternalThreatIntel(features.hostname);
+  const emailAuthIntel =
+    features.source === "email" ? await runEmailAuthIntel(emailSenderDomain, features.brandSignals.length > 0) : null;
 
   if (threatIntel.scoreDelta > 0) {
     score += threatIntel.scoreDelta;
@@ -181,6 +193,11 @@ export async function runAgentAnalyzer(features: PageFeatures, input: AgentAnaly
   if (externalThreatIntel.scoreDelta > 0) {
     score += externalThreatIntel.scoreDelta;
     reasons.push(...externalThreatIntel.reasons);
+  }
+
+  if (emailAuthIntel?.scoreDelta) {
+    score += emailAuthIntel.scoreDelta;
+    reasons.push(...emailAuthIntel.reasons);
   }
 
   if (hostnameRiskSignals >= 2) {
@@ -260,7 +277,18 @@ export async function runAgentAnalyzer(features: PageFeatures, input: AgentAnaly
         enabled: externalThreatIntel.enabled,
         rdap: externalThreatIntel.rdap,
         blacklist: externalThreatIntel.blacklist
-      }
+      },
+      emailAuth: emailAuthIntel
+        ? {
+            domain: emailAuthIntel.domain,
+            mxRecordCount: emailAuthIntel.mxRecordCount,
+            hasSpfRecord: emailAuthIntel.hasSpfRecord,
+            hasDmarcRecord: emailAuthIntel.hasDmarcRecord,
+            dmarcPolicy: emailAuthIntel.dmarcPolicy,
+            discoverableDkimSelectors: emailAuthIntel.discoverableDkimSelectors,
+            checkedDkimSelectors: emailAuthIntel.checkedDkimSelectors
+          }
+        : undefined
     }
   };
 }

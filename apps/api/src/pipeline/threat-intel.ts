@@ -203,19 +203,6 @@ export async function runThreatIntel(hostnames: string[], emailSenderDomain?: st
     reasons.push("Some checked hosts expose unusually weak DNS signals.");
   }
 
-  const emailFinding = emailSenderDomain
-    ? dnsFindings.find((finding) => finding.hostname === normalizeHostname(emailSenderDomain))
-    : undefined;
-  if (emailFinding && emailFinding.mxRecordCount === 0) {
-    scoreDelta += 10;
-    reasons.push("Sender domain does not expose MX records, which is unusual for a real mail sender.");
-  }
-
-  if (emailFinding && !emailFinding.hasSpfRecord) {
-    scoreDelta += 6;
-    reasons.push("Sender domain does not expose an SPF TXT record.");
-  }
-
   return {
     checkedHostnames,
     blacklistMatches,

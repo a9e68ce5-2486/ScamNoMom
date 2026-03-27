@@ -90,6 +90,17 @@ const analysisSchema = z.object({
                 })
                 .optional()
             })
+            .optional(),
+          emailAuth: z
+            .object({
+              domain: z.string(),
+              mxRecordCount: z.number().int().min(0),
+              hasSpfRecord: z.boolean(),
+              hasDmarcRecord: z.boolean(),
+              dmarcPolicy: z.enum(["none", "quarantine", "reject"]).optional(),
+              discoverableDkimSelectors: z.array(z.string()),
+              checkedDkimSelectors: z.array(z.string())
+            })
             .optional()
         })
         .optional()

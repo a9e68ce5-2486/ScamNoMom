@@ -121,6 +121,15 @@ export interface AnalysisResult {
           reason?: string;
         };
       };
+      emailAuth?: {
+        domain: string;
+        mxRecordCount: number;
+        hasSpfRecord: boolean;
+        hasDmarcRecord: boolean;
+        dmarcPolicy?: "none" | "quarantine" | "reject";
+        discoverableDkimSelectors: string[];
+        checkedDkimSelectors: string[];
+      };
     };
   };
   evidence: {

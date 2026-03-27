@@ -305,6 +305,13 @@ PageFeatures
 - sender domain 的 MX / SPF 基本觀察
 - 可選外部 RDAP domain profile 查詢
 - 可選 generic blacklist API 查詢
+- webmail sender domain 的 SPF / DKIM / DMARC domain-level 檢查
+
+限制：
+
+- 目前是以 sender domain 為主的 domain-level 驗證訊號
+- 還不是完整的 message header 驗證
+- 若未來能穩定取得原始郵件標頭，才適合升級成真正的 SPF / DKIM / DMARC pass/fail 驗證
 
 ## 6. 風險分數與決策
 

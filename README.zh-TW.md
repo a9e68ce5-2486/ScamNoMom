@@ -15,6 +15,7 @@ ScamNoMom 是一個混合式的釣魚與詐騙偵測專案，重點支援：
 - `OpenAI` 或 `Ollama/Qwen`：負責語意分析
 - `Rule engine + feedback loop + dataset pipeline`：負責持續優化
 - `Local + optional external threat intel`：負責 DNS、feed、RDAP、blacklist second pass
+- `Email auth intelligence`：負責 webmail 場景的 domain-level SPF / DKIM / DMARC 訊號
 
 ## 專案目前能做什麼
 
