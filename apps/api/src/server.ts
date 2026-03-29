@@ -19,6 +19,7 @@ app.get("/", (_req, res) => {
       health: "GET /health",
       analyze: "POST /analyze",
       analyzeText: "POST /analyze/text",
+      analyzeConversation: "POST /analyze/conversation",
       feedback: "POST /feedback",
       feedbackStats: "GET /feedback/stats"
     }

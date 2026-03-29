@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
 import { analyzeFeatures } from "../pipeline/analyze.js";
+import { analyzeConversation } from "../pipeline/conversation-analyzer.js";
 import { analyzeText } from "../pipeline/text-analyzer.js";
+import type { UserCalibrationProfile } from "../types/analysis.js";
 
 const pageFeaturesSchema = z.object({
   url: z.string().url(),
@@ -67,6 +69,22 @@ const pageFeaturesSchema = z.object({
 export const analyzeRouter = Router();
 const MAX_LINK_HOSTNAMES = 40;
 const MAX_LINK_URLS = 40;
+const calibrationSchema = z
+  .object({
+    riskTolerance: z.enum(["low", "balanced", "high"]).optional(),
+    sensitivityBoost: z.number().min(-20).max(20).optional(),
+    falsePositiveRateHint: z.number().min(0).max(0.8).optional(),
+    highValueProtection: z.boolean().optional()
+  })
+  .optional();
+
+function readCalibration(raw: unknown): UserCalibrationProfile | undefined {
+  const parsed = calibrationSchema.safeParse(raw);
+  if (!parsed.success) {
+    return undefined;
+  }
+  return parsed.data;
+}
 
 analyzeRouter.post("/", async (req, res) => {
   const parsed = pageFeaturesSchema.safeParse(req.body);
@@ -98,7 +116,8 @@ analyzeRouter.post("/", async (req, res) => {
     }
   }
 
-  const result = await analyzeFeatures(parsed.data);
+  const calibration = readCalibration(req.body?.calibration);
+  const result = await analyzeFeatures(parsed.data, calibration);
   return res.json(result);
 });
 
@@ -126,6 +145,45 @@ analyzeRouter.post("/text", async (req, res) => {
     });
   }
 
-  const result = await analyzeText(parsed.data);
+  const calibration = readCalibration(req.body?.calibration);
+  const result = await analyzeText(parsed.data, { calibration });
+  return res.json(result);
+});
+
+const conversationAnalysisSchema = z.object({
+  source: z.literal("conversation"),
+  channel: z.enum(["sms", "line", "messenger", "telegram", "phone_transcript", "manual_report", "other"]),
+  turns: z
+    .array(
+      z.object({
+        role: z.enum(["user", "counterparty", "system"]),
+        text: z.string().min(1).max(3000),
+        timestamp: z.string().optional()
+      })
+    )
+    .min(1)
+    .max(80),
+  title: z.string().max(300).optional(),
+  claimedBrand: z.string().max(200).optional(),
+  metadata: z
+    .object({
+      sender: z.string().max(200).optional(),
+      contact: z.string().max(200).optional(),
+      conversationId: z.string().max(200).optional()
+    })
+    .optional()
+});
+
+analyzeRouter.post("/conversation", async (req, res) => {
+  const parsed = conversationAnalysisSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: "Invalid conversation analysis payload",
+      details: parsed.error.flatten()
+    });
+  }
+
+  const calibration = readCalibration(req.body?.calibration);
+  const result = await analyzeConversation(parsed.data, calibration);
   return res.json(result);
 });

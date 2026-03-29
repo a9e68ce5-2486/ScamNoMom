@@ -5,6 +5,193 @@ function formatTitleCase(text) {
     .join(" ");
 }
 
+function currentFeedbackContext() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(["latestAnalysis", "latestFeatures"], ({ latestAnalysis, latestFeatures }) => {
+      resolve({
+        analysis: latestAnalysis || null,
+        features: latestFeatures || null
+      });
+    });
+  });
+}
+
+function sendLearningEvent(type, payload) {
+  chrome.runtime.sendMessage(
+    {
+      type: "PHISHGUARD_RECORD_LEARNING_EVENT",
+      payload: {
+        type,
+        ...payload
+      }
+    },
+    () => {
+      // Fire-and-forget: learning signal should not block UX actions.
+    }
+  );
+}
+
+function renderInterventionPanel(result) {
+  const panel = document.getElementById("intervention-panel");
+  const summary = document.getElementById("intervention-summary");
+  const actions = document.getElementById("intervention-actions");
+
+  if (!panel || !summary || !actions) {
+    return;
+  }
+
+  const intervention = result?.intervention;
+  if (!intervention || intervention.severity === "none") {
+    panel.hidden = true;
+    summary.textContent = "Potential OTP / transfer scam behavior detected.";
+    actions.innerHTML = "";
+    return;
+  }
+
+  panel.hidden = false;
+  summary.textContent =
+    intervention.severity === "high"
+      ? "High-risk transaction flow: OTP/transfer coercion cues detected."
+      : "Caution: suspicious transfer or verification cues detected.";
+
+  actions.innerHTML = "";
+  const mergedActions = [...(intervention.reasons || []), ...(intervention.suggestedActions || [])].slice(0, 5);
+  for (const action of mergedActions) {
+    const li = document.createElement("li");
+    li.textContent = action;
+    actions.appendChild(li);
+  }
+  if (mergedActions.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "Do not provide OTP or transfer funds before official verification.";
+    actions.appendChild(li);
+  }
+}
+
+function renderCalibrationHint(result) {
+  const hint = document.getElementById("calibration-hint");
+  if (!hint) {
+    return;
+  }
+  const calibration = result?.calibration;
+  if (!calibration?.applied) {
+    hint.textContent = "User calibration: default";
+    return;
+  }
+  const delta = Number(calibration.scoreDelta || 0);
+  const deltaText = delta > 0 ? `+${delta.toFixed(1)}` : delta.toFixed(1);
+  hint.textContent = `User calibration applied (${deltaText})`;
+}
+
+function resetInterventionPanel() {
+  const panel = document.getElementById("intervention-panel");
+  const summary = document.getElementById("intervention-summary");
+  const actions = document.getElementById("intervention-actions");
+  if (!panel || !summary || !actions) {
+    return;
+  }
+  panel.hidden = true;
+  summary.textContent = "Potential OTP / transfer scam behavior detected.";
+  actions.innerHTML = "";
+}
+
+function renderConversationPanel(result) {
+  const panel = document.getElementById("conversation-panel");
+  const summary = document.getElementById("conversation-summary");
+  if (!panel || !summary) {
+    return;
+  }
+  if (result?.source !== "conversation") {
+    panel.hidden = true;
+    summary.textContent = "";
+    return;
+  }
+  panel.hidden = false;
+  const reason = Array.isArray(result.reasons) && result.reasons.length > 0 ? result.reasons[0] : "Conversation analysis completed.";
+  summary.textContent = reason;
+}
+
+function analyzeConversationFromPrompt() {
+  const raw = window.prompt("Paste conversation lines. Prefix each line with 'counterparty:' or 'user:'.");
+  if (!raw) {
+    return;
+  }
+  const turns = String(raw)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const lower = line.toLowerCase();
+      if (lower.startsWith("counterparty:")) {
+        return { role: "counterparty", text: line.slice("counterparty:".length).trim() };
+      }
+      if (lower.startsWith("system:")) {
+        return { role: "system", text: line.slice("system:".length).trim() };
+      }
+      return { role: "user", text: line.startsWith("user:") ? line.slice("user:".length).trim() : line };
+    })
+    .filter((turn) => turn.text.length > 0)
+    .slice(0, 40);
+
+  if (turns.length === 0) {
+    updateRescanUi("idle", "No conversation content");
+    return;
+  }
+
+  updateRescanUi("loading", "Analyzing conversation...");
+  chrome.storage.sync.get(["settings"], ({ settings }) => {
+    const apiBaseUrl = String(settings?.apiBaseUrl || "http://localhost:8787").replace(/\/+$/, "");
+    const calibration = settings?.calibrationProfile || null;
+    fetch(`${apiBaseUrl}/analyze/conversation`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        source: "conversation",
+        channel: "manual_report",
+        turns,
+        calibration
+      })
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((result) => {
+        chrome.storage.local.set({
+          latestAnalysis: result,
+          latestFeatures: {
+            url: "about:conversation",
+            hostname: "conversation",
+            source: "web",
+            title: "Conversation analysis",
+            visibleText: turns.map((t) => `[${t.role}] ${t.text}`).join(" "),
+            forms: { total: 0, passwordFields: 0, externalSubmitCount: 0 },
+            links: { total: 0, mismatchedTextCount: 0, suspiciousTldCount: 0, hostnames: [], urls: [] },
+            dom: { hiddenElementCount: 0, iframeCount: 0 },
+            brandSignals: []
+          }
+        });
+        setStatus(result, null);
+        updateRescanUi("idle", "Conversation analyzed");
+      })
+      .catch(() => {
+        updateRescanUi("idle", "Conversation analyze failed");
+      });
+  });
+}
+
+function setStatus(result, features) {
+  for (const action of intervention.suggestedActions || []) {
+    const li = document.createElement("li");
+    li.textContent = action;
+    actions.appendChild(li);
+  }
+}
+
 function getActionGuide(result, features) {
   if (!result) {
     return "暫無分析結果。";
@@ -331,6 +518,10 @@ function setStatus(result, features) {
     trustHostBtn.disabled = !features?.hostname;
   }
 
+  renderInterventionPanel(result);
+  renderCalibrationHint(result);
+  renderConversationPanel(result);
+
   reasons.innerHTML = "";
   for (const reason of result?.reasons ?? ["No analysis yet."]) {
     const item = document.createElement("li");
@@ -503,4 +694,5 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 restoreDebugPanelState();
 setupDebugPanelVisibility();
 updateFeedbackUi("idle", "No feedback sent");
+resetInterventionPanel();
 refreshFromStorage();

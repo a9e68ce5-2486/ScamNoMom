@@ -251,6 +251,12 @@ h2 {
   gap: 10px;
 }
 
+.calibration-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .feedback-header {
   display: flex;
   justify-content: space-between;
@@ -302,6 +308,35 @@ h2 {
 
 .suppression-banner p {
   margin: 8px 0 0;
+}
+
+.intervention-banner {
+  border: 1px solid rgba(150, 58, 33, 0.28);
+  background: rgba(255, 236, 228, 0.78);
+}
+
+.intervention-banner.severity-caution {
+  border-color: rgba(175, 128, 24, 0.35);
+  background: rgba(255, 244, 218, 0.85);
+}
+
+.intervention-banner.severity-high {
+  border-color: rgba(172, 51, 43, 0.38);
+  background: rgba(255, 229, 223, 0.86);
+}
+
+.intervention-level {
+  margin: 8px 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.intervention-list {
+  margin-top: 8px;
+}
+
+.intervention-list li {
+  margin-bottom: 5px;
 }
 
 .suppression-text {

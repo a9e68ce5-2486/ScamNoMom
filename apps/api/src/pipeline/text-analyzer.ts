@@ -1,5 +1,7 @@
 import { hasKeywordMatch } from "../config/tw-scam-keywords.js";
-import type { AnalysisResult, AttackType, Decision, RiskLevel, TextAnalysisInput } from "../types/analysis.js";
+import type { AnalysisResult, AttackType, Decision, RiskLevel, TextAnalysisInput, UserCalibrationProfile } from "../types/analysis.js";
+import { applyUserCalibration } from "./calibration.js";
+import { detectInterventionRisk } from "./intervention.js";
 
 function scoreToRiskLevel(score: number): RiskLevel {
   if (score >= 70) {
@@ -25,7 +27,10 @@ function scoreToDecision(score: number): Decision {
   return "allow";
 }
 
-export async function analyzeText(input: TextAnalysisInput): Promise<AnalysisResult> {
+export async function analyzeText(
+  input: TextAnalysisInput,
+  options?: { calibration?: UserCalibrationProfile }
+): Promise<AnalysisResult> {
   const text = `${input.title ?? ""} ${input.text}`.toLowerCase();
   const twText = `${input.title ?? ""} ${input.text}`;
   let ruleScore = 0;
@@ -121,7 +126,19 @@ export async function analyzeText(input: TextAnalysisInput): Promise<AnalysisRes
     attackType = attackType === "unknown" ? "government_impersonation" : attackType;
   }
 
-  const combinedScore = Math.max(0, Math.min(100, Math.round(ruleScore * 0.55 + llmScore * 0.45)));
+  const baseScore = Math.max(0, Math.min(100, Math.round(ruleScore * 0.55 + llmScore * 0.45)));
+  const intervention = detectInterventionRisk({
+    source: "text",
+    text: `${input.title ?? ""} ${input.text}`
+  });
+  const riskAdjustedScore = Math.max(baseScore, Math.min(100, baseScore + Math.round(intervention.score * 0.4)));
+  const calibration = applyUserCalibration({
+    baseScore: riskAdjustedScore,
+    attackType,
+    profile: options?.calibration,
+    intervention
+  });
+  const combinedScore = calibration.score;
 
   return {
     source: "text",
@@ -134,9 +151,14 @@ export async function analyzeText(input: TextAnalysisInput): Promise<AnalysisRes
     needsAgent: false,
     analyzedAt: new Date().toISOString(),
     provider: "fallback",
+    intervention,
+    calibration: calibration.evidence,
     evidence: {
       ruleScore,
       llmScore,
+      interventionScore: intervention.score,
+      baseCombinedScore: baseScore,
+      calibratedScore: combinedScore,
       routerDecision: scoreToDecision(combinedScore)
     }
   };

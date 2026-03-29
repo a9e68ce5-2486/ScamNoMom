@@ -21,7 +21,13 @@ const DEFAULT_SETTINGS = {
   apiBaseUrl: "http://localhost:8787",
   overlayEnabled: true,
   autoRescanEnabled: true,
-  notificationMode: "standard"
+  notificationMode: "standard",
+  calibration: {
+    riskTolerance: "balanced",
+    sensitivityBoost: 0,
+    falsePositiveRateHint: 0.15,
+    highValueProtection: true
+  }
 };
 
 function getSettings(callback) {
@@ -771,7 +777,10 @@ function analyzeCurrentPage(sendResponse) {
     chrome.runtime.sendMessage(
       {
         type: "PHISHGUARD_ANALYZE_PAGE",
-        payload: features
+        payload: {
+          ...features,
+          calibration: settings.calibrationProfile || settings.calibration
+        }
       },
       (response) => {
         if (chrome.runtime.lastError) {

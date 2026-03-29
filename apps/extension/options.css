@@ -97,6 +97,16 @@ input[type="url"] {
   color: var(--ink);
 }
 
+input[type="number"] {
+  width: 100%;
+  border: 1px solid rgba(70, 45, 19, 0.16);
+  border-radius: 14px;
+  padding: 13px 14px;
+  background: rgba(255, 255, 255, 0.88);
+  font: inherit;
+  color: var(--ink);
+}
+
 .toggle {
   display: grid;
   grid-template-columns: 22px 1fr;

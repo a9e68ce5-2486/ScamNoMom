@@ -3,6 +3,12 @@ const DEFAULT_SETTINGS = {
   overlayEnabled: true,
   autoRescanEnabled: true,
   notificationMode: "standard",
+  calibrationProfile: {
+    riskTolerance: "balanced",
+    sensitivityBoost: 0,
+    falsePositiveRateHint: 0.15,
+    highValueProtection: true
+  },
   temporaryTrustedHosts: {}
 };
 const REQUEST_TIMEOUT_MS = 8000;
@@ -83,7 +89,24 @@ function sanitizeSettings(rawSettings) {
     autoRescanEnabled:
       typeof rawSettings?.autoRescanEnabled === "boolean" ? rawSettings.autoRescanEnabled : DEFAULT_SETTINGS.autoRescanEnabled,
     notificationMode: normalizeNotificationMode(rawSettings?.notificationMode),
+    calibrationProfile: sanitizeCalibrationProfile(rawSettings?.calibrationProfile),
     temporaryTrustedHosts: normalizedTrustedHosts
+  };
+}
+
+function sanitizeCalibrationProfile(value) {
+  const profile = value && typeof value === "object" ? value : {};
+  const riskTolerance =
+    profile.riskTolerance === "low" || profile.riskTolerance === "high" ? profile.riskTolerance : "balanced";
+  const sensitivityBoost = Number(profile.sensitivityBoost);
+  const falsePositiveRateHint = Number(profile.falsePositiveRateHint);
+  return {
+    riskTolerance,
+    sensitivityBoost: Number.isFinite(sensitivityBoost) ? Math.max(-20, Math.min(20, sensitivityBoost)) : 0,
+    falsePositiveRateHint: Number.isFinite(falsePositiveRateHint)
+      ? Math.max(0, Math.min(0.8, falsePositiveRateHint))
+      : 0.15,
+    highValueProtection: typeof profile.highValueProtection === "boolean" ? profile.highValueProtection : true
   };
 }
 
@@ -280,7 +303,10 @@ async function analyzePayload(payload) {
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({
+      ...payload,
+      calibration: settings.calibrationProfile
+    })
   });
 }
 

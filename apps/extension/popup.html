@@ -47,6 +47,14 @@
         <p id="suppression-text">This result is currently suppressed.</p>
       </section>
 
+      <section id="intervention-panel" class="panel intervention-banner" hidden>
+        <strong>High-risk transaction flow warning</strong>
+        <p id="intervention-summary" class="suppression-text">Potential OTP / transfer scam behavior detected.</p>
+        <ul id="intervention-actions" class="scenario-list">
+          <li>Do not provide OTP or transfer funds.</li>
+        </ul>
+      </section>
+
       <section class="panel facts">
         <div class="fact">
           <span class="fact-label">Attack type</span>
@@ -84,6 +92,7 @@
           <span>LLM Analyzer</span>
           <strong id="llm-score">--</strong>
         </div>
+        <p id="calibration-hint" class="suppression-text"></p>
       </section>
 
       <section class="panel details">

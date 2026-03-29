@@ -24,6 +24,61 @@ export interface TextAnalysisInput {
   };
 }
 
+export interface UserCalibrationProfile {
+  riskTolerance?: "low" | "balanced" | "high";
+  sensitivityBoost?: number;
+  falsePositiveRateHint?: number;
+  highValueProtection?: boolean;
+}
+
+export interface ConversationTurn {
+  role: "user" | "counterparty" | "system";
+  text: string;
+  timestamp?: string;
+}
+
+export interface ConversationAnalysisInput {
+  source: "conversation";
+  channel: "sms" | "line" | "messenger" | "telegram" | "phone_transcript" | "manual_report" | "other";
+  turns: ConversationTurn[];
+  title?: string;
+  claimedBrand?: string;
+  metadata?: {
+    sender?: string;
+    contact?: string;
+    conversationId?: string;
+  };
+}
+
+export interface InterventionResult {
+  score: number;
+  riskTransactionFlow: boolean;
+  severity: "none" | "caution" | "high";
+  reasons: string[];
+  suggestedActions: string[];
+  signals: {
+    otpRequest: boolean;
+    otpUrgency: boolean;
+    transferRequest: boolean;
+    cardOrBankDataRequest: boolean;
+    installmentScamCue: boolean;
+    remoteControlRequest: boolean;
+    offPlatformMove: boolean;
+  };
+}
+
+export interface CalibrationEvidence {
+  applied: boolean;
+  scoreDelta: number;
+  profile: {
+    riskTolerance: "low" | "balanced" | "high";
+    sensitivityBoost: number;
+    falsePositiveRateHint: number;
+    highValueProtection: boolean;
+  };
+  notes: string[];
+}
+
 export interface PageFeatures {
   url: string;
   hostname: string;
@@ -100,7 +155,7 @@ export interface LlmResult {
 }
 
 export interface AnalysisResult {
-  source: "web" | "email" | "text";
+  source: "web" | "email" | "text" | "conversation";
   riskLevel: RiskLevel;
   score: number;
   reasons: string[];
@@ -110,6 +165,8 @@ export interface AnalysisResult {
   needsAgent: boolean;
   analyzedAt: string;
   provider: "openai" | "ollama" | "fallback";
+  intervention?: InterventionResult;
+  calibration?: CalibrationEvidence;
   enrichment?: {
     liveDomUsed: boolean;
     skippedReason?: string;
@@ -187,6 +244,9 @@ export interface AnalysisResult {
     llmScore: number;
     mlScore?: number;
     urlRiskScore?: number;
+    interventionScore?: number;
+    baseCombinedScore?: number;
+    calibratedScore?: number;
     routerDecision: Decision;
     agentScore?: number;
     initialRouterDecision?: Decision;

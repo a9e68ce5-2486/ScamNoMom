@@ -3,9 +3,30 @@ const DEFAULT_SETTINGS = {
   overlayEnabled: true,
   autoRescanEnabled: true,
   notificationMode: "standard",
-  temporaryTrustedHosts: {}
+  temporaryTrustedHosts: {},
+  calibrationProfile: {
+    riskTolerance: "balanced",
+    sensitivityBoost: 0,
+    falsePositiveRateHint: 0.15,
+    highValueProtection: true
+  }
 };
 window.__currentTrustedHosts = {};
+
+function normalizeCalibration(rawCalibration) {
+  const calibration = rawCalibration && typeof rawCalibration === "object" ? rawCalibration : {};
+  const riskToleranceCandidate = String(calibration.riskTolerance || "balanced").trim().toLowerCase();
+  const riskTolerance =
+    riskToleranceCandidate === "low" || riskToleranceCandidate === "high" ? riskToleranceCandidate : "balanced";
+  const sensitivityBoost = Math.max(-20, Math.min(20, Number(calibration.sensitivityBoost ?? 0)));
+  const falsePositiveRateHint = Math.max(0, Math.min(0.8, Number(calibration.falsePositiveRateHint ?? 0.15)));
+  return {
+    riskTolerance,
+    sensitivityBoost: Number.isFinite(sensitivityBoost) ? sensitivityBoost : 0,
+    falsePositiveRateHint: Number.isFinite(falsePositiveRateHint) ? falsePositiveRateHint : 0.15,
+    highValueProtection: calibration.highValueProtection !== false
+  };
+}
 
 function normalizeNotificationMode(value) {
   const mode = String(value || "").trim().toLowerCase();
@@ -36,7 +57,8 @@ function sanitizeSettings(rawSettings) {
     ...DEFAULT_SETTINGS,
     ...(rawSettings || {}),
     notificationMode: normalizeNotificationMode(rawSettings?.notificationMode),
-    temporaryTrustedHosts: normalizeTrustedHosts(rawSettings?.temporaryTrustedHosts)
+    temporaryTrustedHosts: normalizeTrustedHosts(rawSettings?.temporaryTrustedHosts),
+    calibrationProfile: normalizeCalibration(rawSettings?.calibrationProfile)
   };
 }
 
@@ -74,13 +96,23 @@ function readForm() {
     document.getElementById("api-base-url")?.value.trim() || DEFAULT_SETTINGS.apiBaseUrl
   );
   const notificationMode = normalizeNotificationMode(document.getElementById("notification-mode")?.value || "standard");
+  const riskTolerance = String(document.getElementById("risk-tolerance")?.value || "balanced");
+  const sensitivityBoost = Number(document.getElementById("sensitivity-boost")?.value || "0");
+  const falsePositiveRateHint = Number(document.getElementById("false-positive-hint")?.value || "0.15");
+  const highValueProtection = Boolean(document.getElementById("high-value-protection")?.checked);
   const currentTrustedHosts = normalizeTrustedHosts(window.__currentTrustedHosts || {});
   return {
     apiBaseUrl: normalizedApiBaseUrl,
     overlayEnabled: Boolean(document.getElementById("overlay-enabled")?.checked),
     autoRescanEnabled: Boolean(document.getElementById("auto-rescan-enabled")?.checked),
     notificationMode,
-    temporaryTrustedHosts: currentTrustedHosts
+    temporaryTrustedHosts: currentTrustedHosts,
+    calibrationProfile: normalizeCalibration({
+      riskTolerance,
+      sensitivityBoost,
+      falsePositiveRateHint,
+      highValueProtection
+    })
   };
 }
 
@@ -93,6 +125,10 @@ function writeForm(settings) {
   const autoRescanEnabled = document.getElementById("auto-rescan-enabled");
   const notificationMode = document.getElementById("notification-mode");
   const trustedHostsInfo = document.getElementById("trusted-hosts-info");
+  const riskTolerance = document.getElementById("risk-tolerance");
+  const sensitivityBoost = document.getElementById("sensitivity-boost");
+  const falsePositiveHint = document.getElementById("false-positive-hint");
+  const highValueProtection = document.getElementById("high-value-protection");
 
   const now = Date.now();
   const trustedHosts = Object.entries(effective.temporaryTrustedHosts)
@@ -116,6 +152,18 @@ function writeForm(settings) {
   }
   if (trustedHostsInfo) {
     trustedHostsInfo.textContent = trustedHosts.length > 0 ? trustedHosts.join(", ") : "No temporary trusted hosts.";
+  }
+  if (riskTolerance) {
+    riskTolerance.value = effective.calibrationProfile.riskTolerance;
+  }
+  if (sensitivityBoost) {
+    sensitivityBoost.value = String(effective.calibrationProfile.sensitivityBoost);
+  }
+  if (falsePositiveHint) {
+    falsePositiveHint.value = String(effective.calibrationProfile.falsePositiveRateHint);
+  }
+  if (highValueProtection) {
+    highValueProtection.checked = Boolean(effective.calibrationProfile.highValueProtection);
   }
 }
 

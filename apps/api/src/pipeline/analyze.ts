@@ -1,11 +1,13 @@
 import { runAgentAnalyzer } from "./agent-analyzer.js";
+import { applyUserCalibration } from "./calibration.js";
+import { detectInterventionRisk } from "./intervention.js";
 import { runLightweightModel } from "./lightweight-model.js";
 import { enrichPageFeaturesLive } from "./live-page-enricher.js";
 import { runLlmAnalyzer } from "./llm-analyzer.js";
 import { routeDecision } from "./router.js";
 import { runRuleEngine } from "./rule-engine.js";
 import { analyzeUrlRisk } from "./url-risk-analyzer.js";
-import type { AnalysisResult, PageFeatures, RiskLevel } from "../types/analysis.js";
+import type { AnalysisResult, PageFeatures, RiskLevel, UserCalibrationProfile } from "../types/analysis.js";
 
 function scoreToRiskLevel(score: number): RiskLevel {
   if (score >= 70) {
@@ -46,7 +48,7 @@ function isSparseSample(features: PageFeatures): boolean {
   return !String(features.visibleText || "").trim() && (features.forms.total ?? 0) === 0 && (features.dom.iframeCount ?? 0) === 0;
 }
 
-export async function analyzeFeatures(features: PageFeatures): Promise<AnalysisResult> {
+export async function analyzeFeatures(features: PageFeatures, calibration?: UserCalibrationProfile): Promise<AnalysisResult> {
   const fastRule = runRuleEngine(features);
   const fastUrlRisk = analyzeUrlRisk(features);
   const fastScore = Math.round(fastRule.score * 0.65 + fastUrlRisk.score * 0.35);
@@ -87,17 +89,29 @@ export async function analyzeFeatures(features: PageFeatures): Promise<AnalysisR
       urlRisk.score * (urlOnlySample ? 1.0 : 0.9)
     )
   );
-  const initialRouterDecision = routeDecision(combinedScore);
+  const interventionText =
+    effectiveFeatures.source === "email"
+      ? `${effectiveFeatures.title ?? ""} ${effectiveFeatures.visibleText ?? ""} ${effectiveFeatures.email?.subject ?? ""} ${effectiveFeatures.email?.bodyText ?? ""}`
+      : `${effectiveFeatures.title ?? ""} ${effectiveFeatures.visibleText ?? ""}`;
+  const intervention = detectInterventionRisk({
+    source: effectiveFeatures.source,
+    text: interventionText
+  });
+  const scoreWithIntervention = Math.max(combinedScore, Math.min(100, combinedScore + Math.round(intervention.score * 0.45)));
+  const calibrationApplied = applyUserCalibration(scoreWithIntervention, calibration);
+  const initialRouterDecision = routeDecision(calibrationApplied.score, intervention.severity === "high");
 
   const agentResult =
     initialRouterDecision === "escalate"
       ? await runAgentAnalyzer(effectiveFeatures, {
-          baseScore: combinedScore,
+          baseScore: calibrationApplied.score,
           attackType: llmResult.attackType
         })
       : null;
 
-  const finalScore = agentResult?.score ?? combinedScore;
+  const finalScoreRaw = agentResult?.score ?? calibrationApplied.score;
+  const calibratedFinal = applyUserCalibration(finalScoreRaw, calibration);
+  const finalScore = calibratedFinal.score;
   const finalDecision = agentResult ? resolveFinalDecision(finalScore) : initialRouterDecision;
   const finalReasons = agentResult
     ? [...new Set([...mergeReasons([...ruleResult.reasons, ...urlRisk.reasons], llmResult.reasons), ...agentResult.reasons])]
@@ -118,6 +132,8 @@ export async function analyzeFeatures(features: PageFeatures): Promise<AnalysisR
     needsAgent: Boolean(agentResult),
     analyzedAt: new Date().toISOString(),
     provider: llmResult.provider,
+    intervention,
+    calibration: calibratedFinal.evidence,
     agent: agentResult ?? undefined,
     enrichment: enrichment.meta.used
       ? {
@@ -133,6 +149,9 @@ export async function analyzeFeatures(features: PageFeatures): Promise<AnalysisR
       llmScore: llmResult.score,
       mlScore: mlResult.score,
       urlRiskScore: urlRisk.score,
+      interventionScore: intervention.score,
+      baseCombinedScore: combinedScore,
+      calibratedScore: finalScore,
       routerDecision: finalDecision,
       agentScore: agentResult?.score,
       initialRouterDecision,

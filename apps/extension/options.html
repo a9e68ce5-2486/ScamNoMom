@@ -31,6 +31,35 @@
           <span class="hint">Choose how aggressively ScamNoMom shows in-page warnings.</span>
         </label>
 
+        <section class="field">
+          <span class="label">Personalized Calibration</span>
+          <div class="strategy-grid">
+            <label class="strategy">
+              <strong>Risk Tolerance</strong>
+              <select id="risk-tolerance">
+                <option value="low">Low (safer)</option>
+                <option value="balanced">Balanced</option>
+                <option value="high">High (fewer alerts)</option>
+              </select>
+            </label>
+            <label class="strategy">
+              <strong>Sensitivity Boost</strong>
+              <input id="sensitivity-boost" type="number" min="-20" max="20" step="1" value="0" />
+            </label>
+            <label class="strategy">
+              <strong>False Positive Hint</strong>
+              <input id="false-positive-hint" type="number" min="0" max="0.8" step="0.01" value="0.15" />
+            </label>
+          </div>
+          <label class="toggle">
+            <input id="high-value-protection" type="checkbox" />
+            <span>
+              <strong>High-value transfer protection</strong>
+              <small>Increase intervention strictness for OTP, transfer, and bank-data requests.</small>
+            </span>
+          </label>
+        </section>
+
         <div class="trusted-hosts">
           <strong>Temporary Trusted Hosts</strong>
           <span id="trusted-hosts-info" class="hint">No temporary trusted hosts.</span>
