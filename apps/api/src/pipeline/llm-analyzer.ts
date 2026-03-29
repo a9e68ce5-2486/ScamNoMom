@@ -1,6 +1,20 @@
 import { getLlmConfig, hasOllamaConfig, hasOpenAiConfig } from "../config/llm.js";
 import { hasKeywordMatch } from "../config/tw-scam-keywords.js";
 import type { LlmResult, PageFeatures, RiskLevel } from "../types/analysis.js";
+
+const LLM_REQUEST_TIMEOUT_MS = 12000;
+const SUPPORTED_ATTACK_TYPES: LlmResult["attackType"][] = [
+  "credential_harvest",
+  "brand_impersonation",
+  "malware_delivery",
+  "payment_fraud",
+  "investment_scam",
+  "customer_service_scam",
+  "government_impersonation",
+  "romance_scam",
+  "phone_scam",
+  "unknown"
+];
 const TW_BRAND_PATTERN =
   /國泰|玉山|台新|中信|中國信託|富邦|永豐|兆豐|郵局|蝦皮|momo|pchome|露天|博客來|line|7-11|全家|黑貓|新竹物流|宅配通/;
 
@@ -14,6 +28,20 @@ function scoreToRiskLevel(score: number): RiskLevel {
   }
 
   return "low";
+}
+
+function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), LLM_REQUEST_TIMEOUT_MS);
+  return fetch(url, {
+    ...init,
+    signal: controller.signal
+  }).finally(() => clearTimeout(timeout));
+}
+
+function normalizeAttackType(value: unknown): LlmResult["attackType"] {
+  const parsed = String(value || "unknown").toLowerCase() as LlmResult["attackType"];
+  return SUPPORTED_ATTACK_TYPES.includes(parsed) ? parsed : "unknown";
 }
 
 function buildFallbackResult(features: PageFeatures): LlmResult {
@@ -71,19 +99,19 @@ function buildFallbackResult(features: PageFeatures): LlmResult {
   if (hasKeywordMatch(text, "investment")) {
     score += 22;
     reasons.push("Traditional Chinese investment-scam language was detected.");
-    attackType = "payment_fraud";
+    attackType = "investment_scam";
   }
 
   if (hasKeywordMatch(text, "customerService")) {
     score += 18;
     reasons.push("Traditional Chinese fake-customer-service scam language was detected.");
-    attackType = attackType === "credential_harvest" ? attackType : "payment_fraud";
+    attackType = attackType === "credential_harvest" ? attackType : "customer_service_scam";
   }
 
   if (hasKeywordMatch(text, "government")) {
     score += 16;
     reasons.push("Traditional Chinese government-notice scam language was detected.");
-    attackType = attackType === "unknown" ? "brand_impersonation" : attackType;
+    attackType = attackType === "unknown" ? "government_impersonation" : attackType;
   }
 
   if (hasKeywordMatch(text, "qr")) {
@@ -163,6 +191,11 @@ function buildSchema() {
             "brand_impersonation",
             "malware_delivery",
             "payment_fraud",
+            "investment_scam",
+            "customer_service_scam",
+            "government_impersonation",
+            "romance_scam",
+            "phone_scam",
             "unknown"
           ]
         },
@@ -182,7 +215,7 @@ function normalizeLlmResult(data: LlmResult): LlmResult {
     riskLevel: data.riskLevel,
     score: Math.max(0, Math.min(100, Math.round(data.score))),
     reasons: Array.isArray(data.reasons) ? data.reasons.slice(0, 6) : [],
-    attackType: data.attackType,
+    attackType: normalizeAttackType(data.attackType),
     confidence: Math.max(0, Math.min(1, data.confidence)),
     provider: data.provider
   };
@@ -190,7 +223,7 @@ function normalizeLlmResult(data: LlmResult): LlmResult {
 
 async function runOpenAiAnalyzer(features: PageFeatures): Promise<LlmResult> {
   const { apiKey, model } = getLlmConfig().openai;
-  const response = await fetch("https://api.openai.com/v1/responses", {
+  const response = await fetchWithTimeout("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -237,7 +270,7 @@ function extractJsonObject(raw: string): string {
 
 async function runOllamaAnalyzer(features: PageFeatures): Promise<LlmResult> {
   const { baseUrl, model } = getLlmConfig().ollama;
-  const response = await fetch(`${baseUrl}/api/generate`, {
+  const response = await fetchWithTimeout(`${baseUrl}/api/generate`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -255,7 +288,7 @@ Return JSON only using this schema:
   "riskLevel": "low | medium | high",
   "score": 0,
   "reasons": ["short reason"],
-  "attackType": "credential_harvest | brand_impersonation | malware_delivery | payment_fraud | unknown",
+  "attackType": "credential_harvest | brand_impersonation | malware_delivery | payment_fraud | investment_scam | customer_service_scam | government_impersonation | romance_scam | phone_scam | unknown",
   "confidence": 0.0
 }`
     })

@@ -4,6 +4,28 @@ const DEFAULT_SETTINGS = {
   autoRescanEnabled: true
 };
 
+function normalizeApiBaseUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    throw new Error("API Base URL cannot be empty.");
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error("API Base URL format is invalid.");
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("API Base URL must start with http:// or https://");
+  }
+
+  parsed.hash = "";
+  parsed.search = "";
+  return parsed.toString().replace(/\/+$/, "");
+}
+
 function setStatus(message) {
   const status = document.getElementById("status");
   if (status) {
@@ -12,8 +34,11 @@ function setStatus(message) {
 }
 
 function readForm() {
+  const normalizedApiBaseUrl = normalizeApiBaseUrl(
+    document.getElementById("api-base-url")?.value.trim() || DEFAULT_SETTINGS.apiBaseUrl
+  );
   return {
-    apiBaseUrl: document.getElementById("api-base-url")?.value.trim() || DEFAULT_SETTINGS.apiBaseUrl,
+    apiBaseUrl: normalizedApiBaseUrl,
     overlayEnabled: Boolean(document.getElementById("overlay-enabled")?.checked),
     autoRescanEnabled: Boolean(document.getElementById("auto-rescan-enabled")?.checked)
   };
@@ -48,10 +73,14 @@ function loadSettings() {
 }
 
 function saveSettings() {
-  const settings = readForm();
-  chrome.storage.sync.set({ settings }, () => {
-    setStatus("Saved");
-  });
+  try {
+    const settings = readForm();
+    chrome.storage.sync.set({ settings }, () => {
+      setStatus("Saved");
+    });
+  } catch (error) {
+    setStatus(error.message || "Invalid API Base URL");
+  }
 }
 
 function resetDefaults() {

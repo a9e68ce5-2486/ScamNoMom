@@ -3,6 +3,29 @@ const DEFAULT_SETTINGS = {
   overlayEnabled: true,
   autoRescanEnabled: true
 };
+const REQUEST_TIMEOUT_MS = 8000;
+
+function normalizeApiBaseUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    throw new Error("API base URL is empty.");
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error("API base URL is invalid.");
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("API base URL must use http or https.");
+  }
+
+  parsed.hash = "";
+  parsed.search = "";
+  return parsed.toString().replace(/\/+$/, "");
+}
 
 async function getSettings() {
   const { settings } = await chrome.storage.sync.get(["settings"]);
@@ -12,38 +35,50 @@ async function getSettings() {
   };
 }
 
+async function fetchJsonWithTimeout(url, init) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      ...init,
+      signal: controller.signal
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error(`Request timed out after ${REQUEST_TIMEOUT_MS}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function analyzePayload(payload) {
   const settings = await getSettings();
-  const response = await fetch(`${settings.apiBaseUrl}/analyze`, {
+  const baseUrl = normalizeApiBaseUrl(settings.apiBaseUrl);
+  return fetchJsonWithTimeout(`${baseUrl}/analyze`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify(payload)
   });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  return response.json();
 }
 
 async function submitFeedback(payload) {
   const settings = await getSettings();
-  const response = await fetch(`${settings.apiBaseUrl}/feedback`, {
+  const baseUrl = normalizeApiBaseUrl(settings.apiBaseUrl);
+  return fetchJsonWithTimeout(`${baseUrl}/feedback`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify(payload)
   });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  return response.json();
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -94,7 +129,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
       chrome.tabs.sendMessage(activeTab.id, { type: "PHISHGUARD_RESCAN" }, (response) => {
         if (chrome.runtime.lastError) {
-          sendResponse({ ok: false, error: chrome.runtime.lastError.message });
+          const rawMessage = chrome.runtime.lastError.message || "Rescan failed.";
+          const friendlyMessage = rawMessage.includes("Receiving end does not exist")
+            ? "This page cannot be scanned. Try a normal website tab or reload the page."
+            : rawMessage;
+          sendResponse({ ok: false, error: friendlyMessage });
           return;
         }
 

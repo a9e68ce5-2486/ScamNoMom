@@ -467,6 +467,15 @@ function formatTitleCase(text) {
     .join(" ");
 }
 
+function appendReasonList(container, reasons) {
+  container.innerHTML = "";
+  for (const reason of reasons) {
+    const item = document.createElement("li");
+    item.textContent = String(reason || "");
+    container.appendChild(item);
+  }
+}
+
 function shouldShowOverlay(result) {
   return Boolean(
     result &&
@@ -524,8 +533,8 @@ function renderOverlay(result) {
   overlay.innerHTML = `
     <div class="phishguard-header">
       <div>
-        <div class="phishguard-kicker">${kicker}</div>
-        <div class="phishguard-title">${title}</div>
+        <div class="phishguard-kicker"></div>
+        <div class="phishguard-title"></div>
       </div>
       <button class="phishguard-close" type="button" aria-label="Dismiss warning">×</button>
     </div>
@@ -533,36 +542,76 @@ function renderOverlay(result) {
       <div class="phishguard-score-row">
         <div>
           <div class="phishguard-score-label">Risk score</div>
-          <div class="phishguard-score">${result.analysisUnavailable ? "--" : result.score}</div>
+          <div class="phishguard-score"></div>
         </div>
         <div class="phishguard-action">
           <div class="phishguard-mini-label">Recommended</div>
-          <div class="phishguard-fact-value">${result.analysisUnavailable ? "Review Manually" : formatTitleCase(result.recommendedAction)}</div>
+          <div class="phishguard-fact-value phishguard-action-value"></div>
         </div>
       </div>
       <div class="phishguard-meter">
-        <div class="phishguard-meter-fill" style="width: ${result.analysisUnavailable ? 45 : Math.max(0, Math.min(100, result.score || 0))}%"></div>
+        <div class="phishguard-meter-fill"></div>
       </div>
       <div class="phishguard-facts">
         <div class="phishguard-fact">
           <div class="phishguard-mini-label">Attack Type</div>
-          <span class="phishguard-fact-value">${result.analysisUnavailable ? "Unknown" : formatTitleCase(result.attackType)}</span>
+          <span class="phishguard-fact-value phishguard-attack-type"></span>
         </div>
         <div class="phishguard-fact">
           <div class="phishguard-mini-label">Confidence</div>
-          <span class="phishguard-fact-value">${result.analysisUnavailable ? "--" : `${confidence}%`}</span>
+          <span class="phishguard-fact-value phishguard-confidence"></span>
         </div>
         <div class="phishguard-fact">
           <div class="phishguard-mini-label">Engine</div>
-          <span class="phishguard-fact-value">${formatTitleCase(result.provider)}</span>
+          <span class="phishguard-fact-value phishguard-provider"></span>
         </div>
       </div>
-      <ul class="phishguard-reasons">
-        ${topReasons.map((reason) => `<li>${reason}</li>`).join("")}
-      </ul>
-      <div class="phishguard-footer">${footer}</div>
+      <ul class="phishguard-reasons"></ul>
+      <div class="phishguard-footer"></div>
     </div>
   `;
+
+  const kickerEl = overlay.querySelector(".phishguard-kicker");
+  const titleEl = overlay.querySelector(".phishguard-title");
+  const scoreEl = overlay.querySelector(".phishguard-score");
+  const actionEl = overlay.querySelector(".phishguard-action-value");
+  const meterFillEl = overlay.querySelector(".phishguard-meter-fill");
+  const attackTypeEl = overlay.querySelector(".phishguard-attack-type");
+  const confidenceEl = overlay.querySelector(".phishguard-confidence");
+  const providerEl = overlay.querySelector(".phishguard-provider");
+  const reasonsEl = overlay.querySelector(".phishguard-reasons");
+  const footerEl = overlay.querySelector(".phishguard-footer");
+
+  if (kickerEl) {
+    kickerEl.textContent = kicker;
+  }
+  if (titleEl) {
+    titleEl.textContent = title;
+  }
+  if (scoreEl) {
+    scoreEl.textContent = result.analysisUnavailable ? "--" : String(result.score ?? "--");
+  }
+  if (actionEl) {
+    actionEl.textContent = result.analysisUnavailable ? "Review Manually" : formatTitleCase(result.recommendedAction);
+  }
+  if (meterFillEl) {
+    meterFillEl.style.width = `${result.analysisUnavailable ? 45 : Math.max(0, Math.min(100, result.score || 0))}%`;
+  }
+  if (attackTypeEl) {
+    attackTypeEl.textContent = result.analysisUnavailable ? "Unknown" : formatTitleCase(result.attackType);
+  }
+  if (confidenceEl) {
+    confidenceEl.textContent = result.analysisUnavailable ? "--" : `${confidence}%`;
+  }
+  if (providerEl) {
+    providerEl.textContent = formatTitleCase(result.provider);
+  }
+  if (reasonsEl) {
+    appendReasonList(reasonsEl, topReasons);
+  }
+  if (footerEl) {
+    footerEl.textContent = footer;
+  }
 
   overlay.querySelector(".phishguard-close")?.addEventListener("click", () => {
     overlay.remove();

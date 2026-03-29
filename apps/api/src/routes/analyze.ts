@@ -7,8 +7,8 @@ const pageFeaturesSchema = z.object({
   url: z.string().url(),
   hostname: z.string().min(1),
   source: z.enum(["web", "email"]),
-  title: z.string().optional(),
-  visibleText: z.string().optional(),
+  title: z.string().max(300).optional(),
+  visibleText: z.string().max(8000).optional(),
   forms: z.object({
     total: z.number().int().min(0),
     passwordFields: z.number().int().min(0),
@@ -18,27 +18,29 @@ const pageFeaturesSchema = z.object({
     total: z.number().int().min(0),
     mismatchedTextCount: z.number().int().min(0),
     suspiciousTldCount: z.number().int().min(0),
-    hostnames: z.array(z.string()),
-    urls: z.array(z.string().url())
+    hostnames: z.array(z.string().min(1).max(255)).max(40),
+    urls: z.array(z.string().url()).max(40)
   }),
   dom: z.object({
     hiddenElementCount: z.number().int().min(0),
     iframeCount: z.number().int().min(0)
   }),
-  brandSignals: z.array(z.string()),
+  brandSignals: z.array(z.string().min(1).max(120)).max(40),
   email: z
     .object({
       provider: z.enum(["gmail", "outlook", "yahoo", "proton", "generic"]),
-      subject: z.string().optional(),
-      sender: z.string().optional(),
-      replyTo: z.string().optional(),
-      bodyText: z.string().optional(),
+      subject: z.string().max(400).optional(),
+      sender: z.string().max(320).optional(),
+      replyTo: z.string().max(320).optional(),
+      bodyText: z.string().max(8000).optional(),
       linkCount: z.number().int().min(0)
     })
     .optional()
 });
 
 export const analyzeRouter = Router();
+const MAX_LINK_HOSTNAMES = 60;
+const MAX_LINK_URLS = 60;
 
 analyzeRouter.post("/", async (req, res) => {
   const parsed = pageFeaturesSchema.safeParse(req.body);
@@ -47,6 +49,16 @@ analyzeRouter.post("/", async (req, res) => {
     return res.status(400).json({
       error: "Invalid request payload",
       details: parsed.error.flatten()
+    });
+  }
+
+  if (parsed.data.links.hostnames.length > MAX_LINK_HOSTNAMES || parsed.data.links.urls.length > MAX_LINK_URLS) {
+    return res.status(400).json({
+      error: "Too many link entries in payload",
+      limits: {
+        maxHostnames: MAX_LINK_HOSTNAMES,
+        maxUrls: MAX_LINK_URLS
+      }
     });
   }
 

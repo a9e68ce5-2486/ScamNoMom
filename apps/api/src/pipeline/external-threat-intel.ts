@@ -23,6 +23,15 @@ function normalizeHostname(value: string): string {
   return String(value || "").trim().toLowerCase();
 }
 
+function createTimeoutSignal(timeoutMs: number): { signal: AbortSignal; cleanup: () => void } {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return {
+    signal: controller.signal,
+    cleanup: () => clearTimeout(timer)
+  };
+}
+
 function isHostnameEligible(hostname: string): boolean {
   return Boolean(hostname) && !/^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname) && hostname.includes(".");
 }
@@ -46,11 +55,28 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
 }
 
 async function fetchJson(url: string, init: RequestInit, timeoutMs: number, label: string): Promise<unknown> {
-  const response = await withTimeout(fetch(url, init), timeoutMs, label);
-  if (!response.ok) {
-    throw new Error(`${label} returned ${response.status}`);
+  const { signal, cleanup } = createTimeoutSignal(timeoutMs);
+  try {
+    const response = await withTimeout(
+      fetch(url, {
+        ...init,
+        signal
+      }),
+      timeoutMs,
+      label
+    );
+    if (!response.ok) {
+      throw new Error(`${label} returned ${response.status}`);
+    }
+    return response.json();
+  } catch (error) {
+    if ((error as { name?: string }).name === "AbortError") {
+      throw new Error(`${label} timed out after ${timeoutMs}ms`);
+    }
+    throw error;
+  } finally {
+    cleanup();
   }
-  return response.json();
 }
 
 function parseRdapDate(events: unknown[], target: string): string | undefined {

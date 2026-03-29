@@ -2,7 +2,7 @@ import { findMismatchedBrandLinks, findMismatchedBrands } from "../config/tw-bra
 import { hasKeywordMatch } from "../config/tw-scam-keywords.js";
 import { runEmailAuthIntel } from "./email-auth-intel.js";
 import { runExternalThreatIntel } from "./external-threat-intel.js";
-import { resolveRedirectChain } from "./redirect-resolver.js";
+import { resolveRedirectChain, SHORTENER_HOSTS } from "./redirect-resolver.js";
 import { extractRuleSignals } from "./rule-signals.js";
 import { runThreatIntel } from "./threat-intel.js";
 import type { AttackType, PageFeatures } from "../types/analysis.js";
@@ -63,19 +63,6 @@ export interface AgentAnalyzerResult {
   };
 }
 
-const SHORTENER_HOSTS = new Set([
-  "bit.ly",
-  "reurl.cc",
-  "tinyurl.com",
-  "t.co",
-  "rb.gy",
-  "lihi.cc",
-  "ppt.cc",
-  "rebrand.ly",
-  "shorturl.at",
-  "cutt.ly"
-]);
-
 const RISK_PATH_PATTERN = /login|signin|verify|secure|account|billing|payment|invoice|refund|delivery|tracking|otp|password/i;
 
 function clamp(score: number): number {
@@ -134,7 +121,17 @@ export async function runAgentAnalyzer(features: PageFeatures, input: AgentAnaly
   const reasons: string[] = [];
   let attackType = input.attackType;
 
-  const url = new URL(features.url);
+  let url: URL;
+  try {
+    url = new URL(features.url);
+  } catch {
+    return {
+      executed: true,
+      score: clamp(score),
+      confidence: 0.6,
+      reasons: ["Page URL could not be parsed for deep-link analysis."]
+    };
+  }
   const hostnameRiskSignals = countHostnameRiskSignals(features.hostname.toLowerCase());
   const ruleSignals = extractRuleSignals(features);
   const shortenerLinks = features.links.hostnames.filter((hostname) => SHORTENER_HOSTS.has(hostname.toLowerCase()));

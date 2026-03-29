@@ -1,4 +1,4 @@
-const SHORTENER_HOSTS = new Set([
+export const SHORTENER_HOSTS = new Set([
   "bit.ly",
   "reurl.cc",
   "tinyurl.com",
@@ -12,6 +12,7 @@ const SHORTENER_HOSTS = new Set([
 ]);
 
 const REDIRECT_PARAM_KEYS = ["url", "u", "target", "dest", "destination", "redirect", "redir", "next", "continue", "to"];
+const REQUEST_TIMEOUT_MS = 4500;
 
 export interface RedirectResolution {
   originalUrl: string;
@@ -24,11 +25,91 @@ function isHttpUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
 }
 
+function isPrivateIpv4(hostname: string): boolean {
+  const octets = hostname.split(".").map((part) => Number.parseInt(part, 10));
+  if (octets.length !== 4 || octets.some((part) => Number.isNaN(part) || part < 0 || part > 255)) {
+    return false;
+  }
+
+  if (octets[0] === 10) {
+    return true;
+  }
+
+  if (octets[0] === 127) {
+    return true;
+  }
+
+  if (octets[0] === 169 && octets[1] === 254) {
+    return true;
+  }
+
+  if (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) {
+    return true;
+  }
+
+  if (octets[0] === 192 && octets[1] === 168) {
+    return true;
+  }
+
+  return false;
+}
+
+function isDisallowedHostname(hostname: string): boolean {
+  const normalized = hostname.trim().toLowerCase();
+  if (!normalized) {
+    return true;
+  }
+
+  if (normalized === "localhost" || normalized.endsWith(".localhost") || normalized.endsWith(".local")) {
+    return true;
+  }
+
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(normalized)) {
+    return isPrivateIpv4(normalized);
+  }
+
+  if (
+    normalized === "::1" ||
+    normalized === "0:0:0:0:0:0:0:1" ||
+    normalized.startsWith("fe80:") ||
+    normalized.startsWith("fc") ||
+    normalized.startsWith("fd")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function sanitizeRedirectUrl(value: string): string | null {
+  try {
+    const parsed = new URL(value);
+    if (!isHttpUrl(parsed.toString())) {
+      return null;
+    }
+
+    if (parsed.username || parsed.password) {
+      return null;
+    }
+
+    if (isDisallowedHostname(parsed.hostname)) {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
 function extractRedirectParam(url: URL): string | null {
   for (const key of REDIRECT_PARAM_KEYS) {
     const value = url.searchParams.get(key);
     if (value && isHttpUrl(value)) {
-      return value;
+      const sanitized = sanitizeRedirectUrl(value);
+      if (sanitized) {
+        return sanitized;
+      }
     }
   }
 
@@ -36,28 +117,46 @@ function extractRedirectParam(url: URL): string | null {
 }
 
 async function requestOnce(url: string, method: "HEAD" | "GET"): Promise<Response> {
-  return fetch(url, {
-    method,
-    redirect: "manual",
-    headers: {
-      "User-Agent": "scamnomom/redirect-resolver"
-    }
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, {
+      method,
+      redirect: "manual",
+      headers: {
+        "User-Agent": "scamnomom/redirect-resolver"
+      },
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function resolveHttpRedirects(startUrl: string, maxHops = 4): Promise<RedirectResolution> {
-  let currentUrl = startUrl;
+  let currentUrl = sanitizeRedirectUrl(startUrl) || startUrl;
   let hopCount = 0;
 
   for (let i = 0; i < maxHops; i += 1) {
-    const response = await requestOnce(currentUrl, "HEAD").catch(() => requestOnce(currentUrl, "GET"));
+    const safeCurrentUrl = sanitizeRedirectUrl(currentUrl);
+    if (!safeCurrentUrl) {
+      break;
+    }
+
+    const response = await requestOnce(safeCurrentUrl, "HEAD").catch(() => requestOnce(safeCurrentUrl, "GET"));
     const location = response.headers.get("location");
 
     if (!location || response.status < 300 || response.status >= 400) {
       break;
     }
 
-    currentUrl = new URL(location, currentUrl).toString();
+    const nextCandidate = new URL(location, safeCurrentUrl).toString();
+    const safeNextUrl = sanitizeRedirectUrl(nextCandidate);
+    if (!safeNextUrl) {
+      break;
+    }
+
+    currentUrl = safeNextUrl;
     hopCount += 1;
   }
 
@@ -71,12 +170,22 @@ async function resolveHttpRedirects(startUrl: string, maxHops = 4): Promise<Redi
 
 export async function resolveRedirectChain(inputUrl: string): Promise<RedirectResolution> {
   try {
-    const parsed = new URL(inputUrl);
+    const sanitizedInput = sanitizeRedirectUrl(inputUrl);
+    if (!sanitizedInput) {
+      return {
+        originalUrl: inputUrl,
+        finalUrl: inputUrl,
+        hopCount: 0,
+        via: "none"
+      };
+    }
+
+    const parsed = new URL(sanitizedInput);
     const redirectParam = extractRedirectParam(parsed);
 
     if (redirectParam) {
       return {
-        originalUrl: inputUrl,
+        originalUrl: sanitizedInput,
         finalUrl: redirectParam,
         hopCount: 1,
         via: "query_param"
@@ -84,12 +193,12 @@ export async function resolveRedirectChain(inputUrl: string): Promise<RedirectRe
     }
 
     if (SHORTENER_HOSTS.has(parsed.hostname.toLowerCase())) {
-      return await resolveHttpRedirects(inputUrl);
+      return await resolveHttpRedirects(sanitizedInput);
     }
 
     return {
-      originalUrl: inputUrl,
-      finalUrl: inputUrl,
+      originalUrl: sanitizedInput,
+      finalUrl: sanitizedInput,
       hopCount: 0,
       via: "none"
     };

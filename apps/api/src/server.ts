@@ -32,6 +32,21 @@ app.get("/health", (_req, res) => {
 app.use("/analyze", analyzeRouter);
 app.use("/feedback", feedbackRouter);
 
+app.use((_req, res) => {
+  res.status(404).json({
+    ok: false,
+    error: "Route not found"
+  });
+});
+
+app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const message = error instanceof Error ? error.message : "Unexpected server error";
+  res.status(500).json({
+    ok: false,
+    error: message
+  });
+});
+
 app.listen(port, () => {
   console.log(`ScamNoMom API listening on http://localhost:${port}`);
 });
