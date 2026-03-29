@@ -392,6 +392,7 @@ Final Score = 0.4 * Rule Score + 0.6 * LLM Score
 - [mine_tw_scam_patterns.mjs](../scripts/mine_tw_scam_patterns.mjs)
 - [promote_keywords.mjs](../scripts/promote_keywords.mjs)
 - [generate_tw_dashboard.mjs](../scripts/generate_tw_dashboard.mjs)
+- [build_threat_intel_profile.mjs](../scripts/build_threat_intel_profile.mjs)
 - [evaluate_dataset.mjs](../scripts/evaluate_dataset.mjs)
 
 功能：
@@ -401,6 +402,7 @@ Final Score = 0.4 * Rule Score + 0.6 * LLM Score
 - 挖掘台灣新話術
 - 人工審核後提升關鍵詞
 - 產生 dashboard
+- 產生 learning-based threat-intel profile（token + host risk weights）
 - 評估目前模型與規則表現
 
 ## 9. 目前未完成但規劃中的部分
@@ -412,20 +414,23 @@ Final Score = 0.4 * Rule Score + 0.6 * LLM Score
 - redirect / short-link 解析（agent second pass）
 - DNS / local feed second pass
 - 可選外部 RDAP 與 generic blacklist 查詢（`THREAT_INTEL_MODE=auto`）
+- provider-based external threat-intel workflow（rdap / blacklist / learning_profile）
+- policy-based aggregation（single-provider penalty, multi-provider boost, max delta cap）
 - sender domain 的 SPF / DKIM / DMARC domain-level 訊號
 - feedback 評估（`npm run evaluate`）與規則建議（`npm run tune:rules`）
+- threat-intel policy fixtures 測試（`npm run test:threat-intel`）
 
 ### 9.2 部分落地（有骨架，但不是完整版本）
 
-- 外部 threat-intel agent：目前是 second pass + 可選外部查詢，尚未有完整多工具代理工作流
+- 外部 threat-intel agent：雖已 provider 化與 policy 化，但仍是同步 second pass，尚未有非同步深度沙箱流程
 - email authenticity：目前以 domain-level 訊號為主，尚未做到完整原始標頭驗證（header-level pass/fail）
 - 自動化流程：已可安裝排程，但預設仍偏本地研究/實驗流程
 
 ### 9.3 尚未落地（下一階段）
 
-- 完整 WHOIS / sandbox simulation 型 agent 工具整合
-- 自動 rule auto-tuning 寫回與安全審核流程
-- RL policy learning 實驗到可用閉環
+- 完整 WHOIS / sandbox simulation 型 agent 工具整合（含異步任務與佇列）
+- 自動 rule auto-tuning 寫回與安全審核流程（含 rollback）
+- RL policy learning 實驗到可用閉環（可解釋 + 可控）
 - 完整單元測試 / e2e 測試矩陣
 
 ## 10. 總結

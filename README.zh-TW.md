@@ -32,6 +32,7 @@ ScamNoMom 是一個混合式的釣魚與詐騙偵測專案，重點支援：
 - smoke test
 - benchmark dataset 與 benchmark report
 - `doctor` 環境檢查
+- provider-based external threat-intel policy 測試（`npm run test:threat-intel`）
 - 可直接雙擊的安裝 / 啟動 wrapper
 
 整體偵測流程如下：
@@ -442,6 +443,18 @@ npm run tune:rules
 
 - [rule-weight-suggestions.json](./data/processed/rule-weight-suggestions.json)
 - [rule_weights.json](./data/rule_weights.json)
+
+### Threat-Intel Learning Profile
+
+目前 pipeline 也支援建立供 external threat-intel workflow 使用的學習型 profile：
+
+```bash
+npm run pipeline:profile
+```
+
+輸出：
+
+- [threat-intel-profile.json](./data/processed/threat-intel-profile.json)
 
 ### 一鍵啟動與安裝
 

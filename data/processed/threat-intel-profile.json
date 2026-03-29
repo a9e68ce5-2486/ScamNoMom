@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-03-29T01:24:01.226Z",
+  "version": "v1",
+  "sampleStats": {
+    "phishing": 0,
+    "safe": 0
+  },
+  "tokenWeights": [],
+  "riskyHosts": []
+}
