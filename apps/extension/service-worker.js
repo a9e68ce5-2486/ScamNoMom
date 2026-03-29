@@ -9,6 +9,8 @@ const REQUEST_TIMEOUT_MS = 8000;
 const TRUST_HOST_TTL_MS = 24 * 60 * 60 * 1000;
 const IGNORE_ONCE_TTL_MS = 2 * 60 * 60 * 1000;
 const IGNORE_ONCE_KEY = "ignoreOnceUrls";
+const FEEDBACK_EVENTS_KEY = "feedbackEvents";
+const FEEDBACK_EVENT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_TRUSTED_HOSTS = 300;
 
 function normalizeApiBaseUrl(value) {
@@ -100,6 +102,10 @@ async function setTrustedHost(hostname) {
     temporaryTrustedHosts: next
   });
   await chrome.storage.sync.set({ settings: sanitized });
+  await recordFeedbackEvent({
+    eventType: "temporary_trust_host",
+    hostname: normalizedHost
+  });
   return {
     hostname: normalizedHost,
     expiresAt: sanitized.temporaryTrustedHosts[normalizedHost]
@@ -162,7 +168,35 @@ async function setIgnoreOnceUrl(url) {
   await chrome.storage.local.set({
     [IGNORE_ONCE_KEY]: next
   });
+  let hostname = "";
+  try {
+    hostname = new URL(normalizedUrl).hostname.toLowerCase();
+  } catch {
+    hostname = "";
+  }
+  await recordFeedbackEvent({
+    eventType: "ignore_once_url",
+    url: normalizedUrl,
+    hostname
+  });
   return normalizedUrl;
+}
+
+async function recordFeedbackEvent(event) {
+  const now = Date.now();
+  const { [FEEDBACK_EVENTS_KEY]: existing } = await chrome.storage.local.get([FEEDBACK_EVENTS_KEY]);
+  const current = Array.isArray(existing) ? existing : [];
+  const next = current
+    .filter((item) => Number(item?.createdAtTs || 0) + FEEDBACK_EVENT_TTL_MS > now)
+    .slice(-400);
+  next.push({
+    ...event,
+    createdAtTs: now,
+    createdAt: new Date(now).toISOString()
+  });
+  await chrome.storage.local.set({
+    [FEEDBACK_EVENTS_KEY]: next
+  });
 }
 
 async function consumeIgnoreOnceUrl(url) {
@@ -253,12 +287,19 @@ async function analyzePayload(payload) {
 async function submitFeedback(payload) {
   const settings = await getSettings();
   const baseUrl = normalizeApiBaseUrl(settings.apiBaseUrl);
+  const { [FEEDBACK_EVENTS_KEY]: events } = await chrome.storage.local.get([FEEDBACK_EVENTS_KEY]);
+  const feedbackEvents = Array.isArray(events) ? events.slice(-100) : [];
   return fetchJsonWithTimeout(`${baseUrl}/feedback`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({
+      ...payload,
+      context: {
+        feedbackEvents
+      }
+    })
   });
 }
 
@@ -341,6 +382,28 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         sendResponse({ ok: false, error: error.message });
       });
 
+    return true;
+  }
+
+  if (message?.type === "PHISHGUARD_RECORD_LEARNING_EVENT") {
+    const payload = message.payload || {};
+    const normalizedType =
+      payload.type === "ignore_once" || payload.type === "trusted_host" ? payload.type : null;
+    if (!normalizedType) {
+      sendResponse({ ok: false, error: "Invalid learning event type." });
+      return true;
+    }
+
+    recordFeedbackEvent({
+      eventType: normalizedType,
+      reason: String(payload.reason || "").slice(0, 200),
+      url: payload.features?.url || "",
+      hostname: payload.features?.hostname || "",
+      analysis: payload.analysis || null,
+      features: payload.features || null
+    })
+      .then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;
   }
 

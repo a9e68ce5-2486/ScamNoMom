@@ -180,6 +180,8 @@ async function main() {
       predictedWarn: toPredictedLabel(result, "warn_threshold"),
       predictedBlock: toPredictedLabel(result, "block_threshold"),
       score: result.score,
+      mlScore: result.evidence?.mlScore ?? 0,
+      liveDomUsed: Boolean(result.evidence?.enrichment?.liveDomUsed),
       source: record.features.source || "unknown",
       provider: result.provider || "unknown"
     });

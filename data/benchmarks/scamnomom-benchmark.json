@@ -32,6 +32,11 @@
         "iframeCount": 3
       },
       "brandSignals": ["paypal"]
+      ,
+      "liveEnrich": {
+        "enabled": false,
+        "source": "none"
+      }
     }
   },
   {
@@ -66,6 +71,11 @@
         "iframeCount": 0
       },
       "brandSignals": []
+      ,
+      "liveEnrich": {
+        "enabled": false,
+        "source": "none"
+      }
     }
   },
   {
@@ -101,6 +111,10 @@
         "iframeCount": 0
       },
       "brandSignals": ["黑貓"],
+      "liveEnrich": {
+        "enabled": false,
+        "source": "none"
+      },
       "email": {
         "provider": "gmail",
         "subject": "黑貓宅急便: 包裹異常，請立即確認",
@@ -142,6 +156,10 @@
         "iframeCount": 0
       },
       "brandSignals": [],
+      "liveEnrich": {
+        "enabled": false,
+        "source": "none"
+      },
       "email": {
         "provider": "outlook",
         "subject": "Monthly product updates",

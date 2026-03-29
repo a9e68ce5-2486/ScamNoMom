@@ -16,6 +16,7 @@
     "pipeline": "node scripts/run_pipeline.mjs",
     "pipeline:skip-fetch": "node scripts/run_pipeline.mjs --skip-fetch",
     "pipeline:profile": "node scripts/build_threat_intel_profile.mjs",
+    "pipeline:ml-profile": "node scripts/build_lightweight_model_profile.mjs",
     "monitor:daily": "node scripts/daily_monitor.mjs",
     "monitor:daily:skip-fetch": "node scripts/daily_monitor.mjs --skip-fetch",
     "monitor:status": "node scripts/check_daily_monitor_status.mjs",

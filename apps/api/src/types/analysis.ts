@@ -70,6 +70,19 @@ export interface PageFeatures {
     bodyText?: string;
     linkCount: number;
   };
+  liveDom?: {
+    enriched: boolean;
+    source?: "api_fetch" | "none";
+    fetchedAt?: string;
+    cacheHit?: boolean;
+    fetchError?: string;
+  };
+  enrichment?: {
+    liveDomUsed?: boolean;
+    skippedReason?: string;
+    cacheHit?: boolean;
+    fetchedAt?: string;
+  };
 }
 
 export interface RuleResult {
@@ -97,6 +110,11 @@ export interface AnalysisResult {
   needsAgent: boolean;
   analyzedAt: string;
   provider: "openai" | "ollama" | "fallback";
+  enrichment?: {
+    liveDomUsed: boolean;
+    skippedReason?: string;
+    cacheHit?: boolean;
+  };
   agent?: {
     executed: boolean;
     score: number;
@@ -167,9 +185,22 @@ export interface AnalysisResult {
   evidence: {
     ruleScore: number;
     llmScore: number;
+    mlScore?: number;
     urlRiskScore?: number;
     routerDecision: Decision;
     agentScore?: number;
     initialRouterDecision?: Decision;
+    enrichment?: {
+      liveDomUsed: boolean;
+      skippedReason?: string;
+      cacheHit?: boolean;
+    };
+    modelContributions?: {
+      rule: number;
+      llm: number;
+      urlRisk: number;
+      ml: number;
+    };
+    modelVersion?: string;
   };
 }

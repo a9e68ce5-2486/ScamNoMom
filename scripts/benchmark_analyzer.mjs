@@ -160,6 +160,10 @@ async function main() {
     cases: records
   };
 
+  if (process.env.BENCHMARK_STRICT === "1" && report.warnThreshold.metrics.recall < 0.8) {
+    throw new Error(`Warn-threshold recall too low: ${report.warnThreshold.metrics.recall}`);
+  }
+
   await mkdir(OUTPUT_DIR, { recursive: true });
   await writeFile(JSON_REPORT_PATH, JSON.stringify(report, null, 2));
   await writeFile(MD_REPORT_PATH, toMarkdown(report));

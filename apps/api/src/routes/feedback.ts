@@ -132,9 +132,27 @@ const analysisSchema = z.object({
   evidence: z.object({
     ruleScore: z.number(),
     llmScore: z.number(),
+    mlScore: z.number().optional(),
+    urlRiskScore: z.number().optional(),
     routerDecision: z.enum(["allow", "warn", "escalate", "block"]),
     agentScore: z.number().optional(),
-    initialRouterDecision: z.enum(["allow", "warn", "escalate", "block"]).optional()
+    initialRouterDecision: z.enum(["allow", "warn", "escalate", "block"]).optional(),
+    enrichment: z
+      .object({
+        liveDomUsed: z.boolean(),
+        skippedReason: z.string().optional(),
+        cacheHit: z.boolean().optional()
+      })
+      .optional(),
+    modelContributions: z
+      .object({
+        rule: z.number(),
+        llm: z.number(),
+        urlRisk: z.number(),
+        ml: z.number()
+      })
+      .optional(),
+    modelVersion: z.string().optional()
   })
 });
 
@@ -178,6 +196,16 @@ const featuresSchema = z.object({
       isShortenerHost: z.boolean().optional()
     })
     .optional(),
+  enrichment: z
+    .object({
+      attempted: z.boolean(),
+      success: z.boolean(),
+      method: z.enum(["none", "live_dom"]),
+      cacheHit: z.boolean(),
+      latencyMs: z.number().int().min(0).optional(),
+      error: z.string().optional()
+    })
+    .optional(),
   email: z
     .object({
       provider: z.enum(["gmail", "outlook", "yahoo", "proton", "generic"]),
@@ -190,15 +218,29 @@ const featuresSchema = z.object({
     .optional()
 });
 
+const learningEventSchema = z.object({
+  type: z.enum(["ignore_once", "trusted_host"]),
+  createdAt: z.string(),
+  reason: z.string().max(200).optional(),
+  analysis: analysisSchema.optional(),
+  features: featuresSchema.optional()
+});
+
 const feedbackSchema = z.object({
   label: z.enum(["safe", "phishing"]),
   notes: z.string().max(500).optional(),
   analysis: analysisSchema,
-  features: featuresSchema
+  features: featuresSchema,
+  context: z
+    .object({
+      feedbackEvents: z.array(learningEventSchema).max(120).optional()
+    })
+    .optional()
 });
 
 const DATA_DIR = path.resolve(process.cwd(), "data");
 const FEEDBACK_FILE = path.join(DATA_DIR, "feedback.json");
+const FEEDBACK_EVENTS_FILE = path.join(DATA_DIR, "feedback-events.json");
 
 async function ensureStore() {
   await mkdir(DATA_DIR, { recursive: true });
@@ -224,7 +266,36 @@ async function writeFeedbackRecords(records: unknown[]) {
   await writeFile(FEEDBACK_FILE, JSON.stringify(records, null, 2));
 }
 
+async function readFeedbackEventRecords() {
+  await ensureStore();
+  try {
+    const raw = await readFile(FEEDBACK_EVENTS_FILE, "utf8");
+    return JSON.parse(raw) as unknown[];
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  }
+}
+
+async function writeFeedbackEventRecords(records: unknown[]) {
+  await ensureStore();
+  await writeFile(FEEDBACK_EVENTS_FILE, JSON.stringify(records, null, 2));
+}
+
 export const feedbackRouter = Router();
+
+interface FeedbackRecordPayload extends z.infer<typeof feedbackSchema> {
+  id: string;
+  createdAt: string;
+  feedbackSignals?: {
+    ignoreOnce: boolean;
+    trustedHost: boolean;
+    likelyFalsePositive: boolean;
+    likelyMissedPhish: boolean;
+  };
+}
 
 feedbackRouter.post("/", async (req, res) => {
   const parsed = feedbackSchema.safeParse(req.body);
@@ -237,14 +308,42 @@ feedbackRouter.post("/", async (req, res) => {
   }
 
   const records = await readFeedbackRecords();
-  const record = {
+  const record: FeedbackRecordPayload = {
     id: `fb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     createdAt: new Date().toISOString(),
     ...parsed.data
   };
 
+  if (record.analysis?.source === "web" || record.analysis?.source === "email") {
+    const feedbackSignals = {
+      ignoreOnce: record.label === "safe" && record.analysis?.recommendedAction !== "allow",
+      trustedHost: record.label === "safe" && record.analysis?.recommendedAction === "warn",
+      likelyFalsePositive: record.label === "safe" && Number(record.analysis?.score || 0) >= 55,
+      likelyMissedPhish: record.label === "phishing" && Number(record.analysis?.score || 0) <= 45
+    };
+    record.feedbackSignals = feedbackSignals;
+  }
+
   records.push(record);
   await writeFeedbackRecords(records);
+
+  const contextEvents = parsed.data.context?.feedbackEvents || [];
+  if (contextEvents.length > 0) {
+    const eventRecords = await readFeedbackEventRecords();
+    const now = Date.now();
+    const maxAgeMs = 30 * 24 * 60 * 60 * 1000;
+    const filtered = eventRecords.filter((item) => {
+      const candidate = item as { createdAt?: string } | null;
+      const ts = Date.parse(String(candidate?.createdAt || ""));
+      return Number.isFinite(ts) && now - ts <= maxAgeMs;
+    });
+    const appended = contextEvents.map((event) => ({
+      id: `fbe_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      linkedFeedbackId: record.id,
+      ...event
+    }));
+    await writeFeedbackEventRecords([...filtered, ...appended].slice(-1200));
+  }
 
   return res.json({
     ok: true,

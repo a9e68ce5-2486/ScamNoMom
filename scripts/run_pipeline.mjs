@@ -36,6 +36,9 @@ async function main() {
   await runNodeScript(path.join(ROOT, "scripts/prepare_dataset.mjs"));
   steps.push("prepare_dataset");
 
+  await runNodeScript(path.join(ROOT, "scripts/build_lightweight_model_profile.mjs"));
+  steps.push("build_lightweight_model_profile");
+
   await runNodeScript(path.join(ROOT, "scripts/mine_tw_scam_patterns.mjs"));
   steps.push("mine_tw_scam_patterns");
 

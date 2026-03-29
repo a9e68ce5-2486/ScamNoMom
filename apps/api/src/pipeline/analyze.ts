@@ -1,4 +1,6 @@
 import { runAgentAnalyzer } from "./agent-analyzer.js";
+import { runLightweightModel } from "./lightweight-model.js";
+import { enrichPageFeaturesLive } from "./live-page-enricher.js";
 import { runLlmAnalyzer } from "./llm-analyzer.js";
 import { routeDecision } from "./router.js";
 import { runRuleEngine } from "./rule-engine.js";
@@ -17,8 +19,15 @@ function scoreToRiskLevel(score: number): RiskLevel {
   return "low";
 }
 
-function mergeReasons(ruleReasons: string[], llmReasons: string[]): string[] {
-  return [...new Set([...ruleReasons, ...llmReasons])];
+function mergeReasons(...reasonGroups: Array<string[] | undefined>): string[] {
+  const merged: string[] = [];
+  for (const group of reasonGroups) {
+    if (!Array.isArray(group)) {
+      continue;
+    }
+    merged.push(...group);
+  }
+  return [...new Set(merged)];
 }
 
 function resolveFinalDecision(score: number): AnalysisResult["recommendedAction"] {
@@ -33,16 +42,48 @@ function resolveFinalDecision(score: number): AnalysisResult["recommendedAction"
   return "allow";
 }
 
+function isSparseSample(features: PageFeatures): boolean {
+  return !String(features.visibleText || "").trim() && (features.forms.total ?? 0) === 0 && (features.dom.iframeCount ?? 0) === 0;
+}
+
 export async function analyzeFeatures(features: PageFeatures): Promise<AnalysisResult> {
-  const ruleResult = runRuleEngine(features);
-  const urlRisk = analyzeUrlRisk(features);
-  const llmResult = await runLlmAnalyzer(features);
-  const urlOnlySample = !String(features.visibleText || "").trim() && (features.forms.total ?? 0) === 0 && (features.dom.iframeCount ?? 0) === 0;
+  const fastRule = runRuleEngine(features);
+  const fastUrlRisk = analyzeUrlRisk(features);
+  const fastScore = Math.round(fastRule.score * 0.65 + fastUrlRisk.score * 0.35);
+  const enrichment = await enrichPageFeaturesLive(features, fastScore);
+  const effectiveFeatures = enrichment.features;
+  const ruleResult = runRuleEngine(effectiveFeatures);
+  const urlRisk = analyzeUrlRisk(effectiveFeatures);
+  const llmResult = await runLlmAnalyzer(effectiveFeatures);
+  const mlResult = await runLightweightModel(effectiveFeatures);
+  const urlOnlySample = isSparseSample(effectiveFeatures);
+  const modelContributions =
+    effectiveFeatures.source === "email"
+      ? {
+          rule: 0.4,
+          llm: 0.45,
+          urlRisk: 0.05,
+          ml: 0.1
+        }
+      : urlOnlySample
+        ? {
+            rule: 0.45,
+            llm: 0.12,
+            urlRisk: 0.23,
+            ml: 0.2
+          }
+        : {
+            rule: 0.27,
+            llm: 0.35,
+            urlRisk: 0.18,
+            ml: 0.2
+          };
   const combinedScore = Math.round(
     Math.max(
-      urlOnlySample
-        ? ruleResult.score * 0.6 + llmResult.score * 0.15 + urlRisk.score * 0.25
-        : ruleResult.score * 0.35 + llmResult.score * 0.45 + urlRisk.score * 0.2,
+      ruleResult.score * modelContributions.rule +
+        llmResult.score * modelContributions.llm +
+        urlRisk.score * modelContributions.urlRisk +
+        mlResult.score * modelContributions.ml,
       urlRisk.score * (urlOnlySample ? 1.0 : 0.9)
     )
   );
@@ -50,7 +91,7 @@ export async function analyzeFeatures(features: PageFeatures): Promise<AnalysisR
 
   const agentResult =
     initialRouterDecision === "escalate"
-      ? await runAgentAnalyzer(features, {
+      ? await runAgentAnalyzer(effectiveFeatures, {
           baseScore: combinedScore,
           attackType: llmResult.attackType
         })
@@ -67,23 +108,41 @@ export async function analyzeFeatures(features: PageFeatures): Promise<AnalysisR
     : llmResult.confidence;
 
   return {
-    source: features.source,
+    source: effectiveFeatures.source,
     riskLevel: scoreToRiskLevel(finalScore),
     score: finalScore,
     reasons: finalReasons,
-    confidence: finalConfidence,
+    confidence: Math.max(finalConfidence, mlResult.confidence * 0.75),
     attackType: finalAttackType,
     recommendedAction: finalDecision,
     needsAgent: Boolean(agentResult),
     analyzedAt: new Date().toISOString(),
     provider: llmResult.provider,
     agent: agentResult ?? undefined,
+    enrichment: enrichment.meta.used
+      ? {
+          liveDomUsed: true,
+          cacheHit: enrichment.meta.cacheHit
+        }
+      : {
+          liveDomUsed: false,
+          skippedReason: enrichment.meta.reason
+        },
     evidence: {
       ruleScore: Math.max(ruleResult.score, urlRisk.score),
       llmScore: llmResult.score,
+      mlScore: mlResult.score,
+      urlRiskScore: urlRisk.score,
       routerDecision: finalDecision,
       agentScore: agentResult?.score,
-      initialRouterDecision
+      initialRouterDecision,
+      enrichment: {
+        liveDomUsed: enrichment.meta.used,
+        skippedReason: enrichment.meta.reason,
+        cacheHit: enrichment.meta.cacheHit
+      },
+      modelContributions,
+      modelVersion: mlResult.version
     }
   };
 }

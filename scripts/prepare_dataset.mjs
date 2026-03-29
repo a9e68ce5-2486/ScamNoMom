@@ -3,6 +3,7 @@ import path from "node:path";
 
 const ROOT = process.cwd();
 const FEEDBACK_PATH = path.join(ROOT, "apps/api/data/feedback.json");
+const FEEDBACK_EVENTS_PATH = path.join(ROOT, "apps/api/data/feedback-events.json");
 const EXTERNAL_DIR = path.join(ROOT, "data/raw/external");
 const OUTPUT_DIR = path.join(ROOT, "data/processed");
 const OUTPUT_PATH = path.join(OUTPUT_DIR, "training-samples.json");
@@ -32,15 +33,94 @@ function toTrainingSample(record) {
     signals: {
       ruleScore: analysis.evidence?.ruleScore ?? 0,
       llmScore: analysis.evidence?.llmScore ?? 0,
+      mlScore: analysis.evidence?.mlScore ?? 0,
+      urlRiskScore: analysis.evidence?.urlRiskScore ?? 0,
       riskScore: analysis.score ?? 0,
+      hasPasswordField: Number(features?.forms?.passwordFields || 0) > 0 ? 1 : 0,
+      externalSubmitCount: Number(features?.forms?.externalSubmitCount || 0),
+      mismatchedTextCount: Number(features?.links?.mismatchedTextCount || 0),
+      suspiciousTldCount: Number(features?.links?.suspiciousTldCount || 0),
+      hiddenElementCount: Number(features?.dom?.hiddenElementCount || 0),
+      iframeCount: Number(features?.dom?.iframeCount || 0),
+      urlLength: Number(features?.urlSignals?.length || features?.url?.length || 0),
+      hasIpHost: Boolean(features?.urlSignals?.hasIpHost) ? 1 : 0,
+      hasAtSymbol: Boolean(features?.urlSignals?.hasAtSymbol) ? 1 : 0,
+      hasPunycode: Boolean(features?.urlSignals?.hasPunycode) ? 1 : 0,
+      hasHexEncoding: Boolean(features?.urlSignals?.hasHexEncoding) ? 1 : 0,
+      hasSuspiciousPathKeyword: Boolean(features?.urlSignals?.hasSuspiciousPathKeyword) ? 1 : 0,
+      hasSuspiciousQueryKeyword: Boolean(features?.urlSignals?.hasSuspiciousQueryKeyword) ? 1 : 0,
+      hasLongHostname: Boolean(features?.urlSignals?.hasLongHostname) ? 1 : 0,
+      hasManySubdomains: Boolean(features?.urlSignals?.hasManySubdomains) ? 1 : 0,
       attackType: analysis.attackType ?? "unknown",
       brandSignals: Array.isArray(features.brandSignals) ? features.brandSignals : [],
-      emailProvider: features.email?.provider ?? ""
+      emailProvider: features.email?.provider ?? "",
+      liveDomUsed: Boolean(features.liveDom?.enriched),
+      liveDomEnriched: Boolean(features.liveDom?.enriched) ? 1 : 0,
+      liveDomFetchError: features.liveDom?.fetchError ? 1 : 0
     },
     provenance: {
       sourceName: "extension_feedback",
       collectedAt: record.createdAt ?? new Date().toISOString(),
       feedbackId: record.id
+    }
+  };
+}
+
+function toHardNegativeSample(event) {
+  const normalizedUrl = normalizeUrl(event?.url || "");
+  const hostname = normalizeHostname(event?.hostname || hostnameFromUrl(normalizedUrl));
+  if (!hostname) {
+    return null;
+  }
+
+  const sourceName = event?.eventType === "ignore_once" ? "extension_ignore_once" : "extension_trust_host";
+  const idSuffix = String(event?.id || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+
+  return {
+    id: `hard_negative_${idSuffix}`,
+    sourceType: "web",
+    label: "safe",
+    content: {
+      url: normalizedUrl || `https://${hostname}`,
+      hostname,
+      title: "",
+      visibleText: "",
+      subject: "",
+      sender: "",
+      bodyText: ""
+    },
+    signals: {
+      ruleScore: 0,
+      llmScore: 0,
+      mlScore: 0,
+      urlRiskScore: 0,
+      riskScore: 0,
+      hasPasswordField: 0,
+      externalSubmitCount: 0,
+      mismatchedTextCount: 0,
+      suspiciousTldCount: 0,
+      hiddenElementCount: 0,
+      iframeCount: 0,
+      urlLength: normalizedUrl.length || hostname.length,
+      hasIpHost: 0,
+      hasAtSymbol: normalizedUrl.includes("@") ? 1 : 0,
+      hasPunycode: hostname.includes("xn--") ? 1 : 0,
+      hasHexEncoding: /%[0-9a-f]{2}/i.test(normalizedUrl) ? 1 : 0,
+      hasSuspiciousPathKeyword: /login|verify|signin|account|secure|auth|password|billing|invoice|refund|otp/i.test(normalizedUrl) ? 1 : 0,
+      hasSuspiciousQueryKeyword: /token|session|redirect|verify|login|password|auth/i.test(normalizedUrl) ? 1 : 0,
+      hasLongHostname: hostname.length >= 35 ? 1 : 0,
+      hasManySubdomains: hostname.split(".").filter(Boolean).length >= 4 ? 1 : 0,
+      attackType: "unknown",
+      brandSignals: [],
+      emailProvider: "",
+      liveDomUsed: false,
+      liveDomEnriched: 0,
+      liveDomFetchError: 0
+    },
+    provenance: {
+      sourceName,
+      collectedAt: event?.createdAt || new Date().toISOString(),
+      feedbackId: String(event?.id || "")
     }
   };
 }
@@ -92,10 +172,30 @@ function phishTankRowToSample(row, index) {
     signals: {
       ruleScore: 0,
       llmScore: 0,
+      mlScore: 0,
+      urlRiskScore: 0,
       riskScore: 100,
+      hasPasswordField: 0,
+      externalSubmitCount: 0,
+      mismatchedTextCount: 0,
+      suspiciousTldCount: 0,
+      hiddenElementCount: 0,
+      iframeCount: 0,
+      urlLength: url.length,
+      hasIpHost: /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostnameFromUrl(url)) ? 1 : 0,
+      hasAtSymbol: url.includes("@") ? 1 : 0,
+      hasPunycode: hostnameFromUrl(url).includes("xn--") ? 1 : 0,
+      hasHexEncoding: /%[0-9a-f]{2}/i.test(url) ? 1 : 0,
+      hasSuspiciousPathKeyword: /login|verify|signin|account|secure|auth|password|billing|invoice|refund|otp/i.test(url) ? 1 : 0,
+      hasSuspiciousQueryKeyword: /token|session|redirect|verify|login|password|auth/i.test(url) ? 1 : 0,
+      hasLongHostname: hostnameFromUrl(url).length >= 35 ? 1 : 0,
+      hasManySubdomains: hostnameFromUrl(url).split(".").filter(Boolean).length >= 4 ? 1 : 0,
       attackType: "unknown",
       brandSignals: [],
-      emailProvider: ""
+      emailProvider: "",
+      liveDomUsed: false,
+      liveDomEnriched: 0,
+      liveDomFetchError: 0
     },
     provenance: {
       sourceName: "phishtank",
@@ -127,10 +227,30 @@ function openPhishUrlToSample(url, index) {
     signals: {
       ruleScore: 0,
       llmScore: 0,
+      mlScore: 0,
+      urlRiskScore: 0,
       riskScore: 100,
+      hasPasswordField: 0,
+      externalSubmitCount: 0,
+      mismatchedTextCount: 0,
+      suspiciousTldCount: 0,
+      hiddenElementCount: 0,
+      iframeCount: 0,
+      urlLength: normalized.length,
+      hasIpHost: /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostnameFromUrl(normalized)) ? 1 : 0,
+      hasAtSymbol: normalized.includes("@") ? 1 : 0,
+      hasPunycode: hostnameFromUrl(normalized).includes("xn--") ? 1 : 0,
+      hasHexEncoding: /%[0-9a-f]{2}/i.test(normalized) ? 1 : 0,
+      hasSuspiciousPathKeyword: /login|verify|signin|account|secure|auth|password|billing|invoice|refund|otp/i.test(normalized) ? 1 : 0,
+      hasSuspiciousQueryKeyword: /token|session|redirect|verify|login|password|auth/i.test(normalized) ? 1 : 0,
+      hasLongHostname: hostnameFromUrl(normalized).length >= 35 ? 1 : 0,
+      hasManySubdomains: hostnameFromUrl(normalized).split(".").filter(Boolean).length >= 4 ? 1 : 0,
       attackType: "unknown",
       brandSignals: [],
-      emailProvider: ""
+      emailProvider: "",
+      liveDomUsed: false,
+      liveDomEnriched: 0,
+      liveDomFetchError: 0
     },
     provenance: {
       sourceName: "openphish",
@@ -152,6 +272,10 @@ async function readJsonArray(filePath) {
 
     throw error;
   }
+}
+
+function normalizeHostname(value) {
+  return String(value || "").trim().toLowerCase();
 }
 
 async function listExternalFiles() {
@@ -332,13 +456,25 @@ async function loadPhishingArmySamples(files) {
 
 async function main() {
   const feedbackRecords = await readJsonArray(FEEDBACK_PATH);
+  const feedbackEvents = await readJsonArray(FEEDBACK_EVENTS_PATH);
   const externalFiles = await listExternalFiles();
   const feedbackSamples = feedbackRecords.map(toTrainingSample);
+  const hardNegativeSamples = feedbackEvents
+    .filter((event) => event?.eventType === "ignore_once" || event?.eventType === "trust_host")
+    .map(toHardNegativeSample)
+    .filter(Boolean);
   const phishTankSamples = await loadPhishTankSamples(externalFiles);
   const openPhishSamples = await loadOpenPhishSamples(externalFiles);
   const urlHausSamples = await loadUrlHausSamples(externalFiles);
   const phishingArmySamples = await loadPhishingArmySamples(externalFiles);
-  const samples = [...feedbackSamples, ...phishTankSamples, ...openPhishSamples, ...urlHausSamples, ...phishingArmySamples];
+  const samples = [
+    ...feedbackSamples,
+    ...hardNegativeSamples,
+    ...phishTankSamples,
+    ...openPhishSamples,
+    ...urlHausSamples,
+    ...phishingArmySamples
+  ];
 
   await mkdir(OUTPUT_DIR, { recursive: true });
   await writeFile(OUTPUT_PATH, JSON.stringify(samples, null, 2));
@@ -348,6 +484,8 @@ async function main() {
       {
         ok: true,
         inputFeedbackRecords: feedbackRecords.length,
+        inputFeedbackEvents: feedbackEvents.length,
+        hardNegativeSamples: hardNegativeSamples.length,
         inputPhishTankSamples: phishTankSamples.length,
         inputOpenPhishSamples: openPhishSamples.length,
         inputUrlHausSamples: urlHausSamples.length,

@@ -36,12 +36,24 @@
         "ruleScore": { "type": "number" },
         "llmScore": { "type": "number" },
         "riskScore": { "type": "number" },
+        "mlScore": { "type": "number" },
         "attackType": { "type": "string" },
         "brandSignals": {
           "type": "array",
           "items": { "type": "string" }
         },
-        "emailProvider": { "type": "string" }
+        "emailProvider": { "type": "string" },
+        "liveDomUsed": { "type": "boolean" },
+        "trustedHostBypass": { "type": "boolean" },
+        "ignoreOnceBypass": { "type": "boolean" },
+        "sourceFeedback": {
+          "type": "object",
+          "properties": {
+            "label": { "type": "string", "enum": ["safe", "phishing"] },
+            "notes": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": false
     },

@@ -399,6 +399,13 @@ function suppressOnceCurrentUrl() {
           updateFeedbackUi("idle", "Ignore once failed");
           return;
         }
+        currentFeedbackContext().then(({ analysis, features }) => {
+          sendLearningEvent("ignore_once", {
+            reason: "user_ignored_once",
+            analysis,
+            features
+          });
+        });
         updateFeedbackUi("idle", "Ignored once for this URL");
         chrome.runtime.sendMessage({ type: "PHISHGUARD_TRIGGER_RESCAN" }, () => {
           refreshFromStorage();
@@ -427,6 +434,13 @@ function trustCurrentHostTemporarily() {
           updateFeedbackUi("idle", "Temporary trust failed");
           return;
         }
+        currentFeedbackContext().then(({ analysis, features }) => {
+          sendLearningEvent("trusted_host", {
+            reason: "user_trusted_host_temporarily",
+            analysis,
+            features
+          });
+        });
         updateFeedbackUi("idle", "Host trusted for 24h");
         chrome.runtime.sendMessage({ type: "PHISHGUARD_TRIGGER_RESCAN" }, () => {
           refreshFromStorage();

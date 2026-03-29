@@ -26,6 +26,15 @@ const pageFeaturesSchema = z.object({
     iframeCount: z.number().int().min(0)
   }),
   brandSignals: z.array(z.string().min(1).max(120)).max(40),
+  liveDom: z
+    .object({
+      enriched: z.boolean(),
+      source: z.enum(["api_fetch", "none"]).optional(),
+      fetchedAt: z.string().optional(),
+      cacheHit: z.boolean().optional(),
+      fetchError: z.string().optional()
+    })
+    .optional(),
   urlSignals: z
     .object({
       dotCount: z.number().int().min(0).max(30).optional(),
