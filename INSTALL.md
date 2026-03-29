@@ -274,13 +274,52 @@ Install without re-fetching feeds:
 node scripts/install_daily_pipeline_schedule.mjs --hour 3 --minute 15 --skip-fetch
 ```
 
+Install daily monitor mode (fetch + test + anomaly summary):
+
+```bash
+node scripts/install_daily_pipeline_schedule.mjs --hour 3 --minute 15 --monitor
+```
+
+Run daily monitor manually:
+
+```bash
+npm run monitor:daily
+```
+
+Check latest monitor status:
+
+```bash
+npm run monitor:status
+```
+
+Monitor mode also generates:
+
+- `data/processed/daily-monitor-summary.json`
+- `data/processed/daily-monitor-summary.md`
+- `data/processed/daily-monitor-history.json`
+
+Optional notification webhook:
+
+```bash
+MONITOR_WEBHOOK_URL=https://your-webhook-endpoint
+```
+
+Monitor thresholds can be tuned with env vars:
+
+```bash
+MONITOR_MIN_FEED_SUCCESS_RATE=0.75
+MONITOR_MAX_WARN_RATE_DELTA=0.18
+MONITOR_MIN_ANALYZED=60
+MONITOR_HISTORY_DAYS=120
+```
+
 Uninstall:
 
 ```bash
 npm run schedule:uninstall
 ```
 
-## 10. Install API Auto-Start
+## 12. Install API Auto-Start
 
 If you do not want to open a terminal and start the API manually every time, install the API auto-start job:
 
@@ -311,7 +350,7 @@ Supported platforms:
 - Linux: starts at reboot with `crontab`
 - Windows: starts at user logon with `schtasks`
 
-## 11. Practical Recommendation
+## 13. Practical Recommendation
 
 For actual daily use, the simplest stable setup is:
 
@@ -328,7 +367,7 @@ After that, normal usage is just:
 - let the local API run in the background
 - review warnings, feedback, and dashboard when needed
 
-## 12. Prepare a User Distribution Package
+## 14. Prepare a User Distribution Package
 
 If you want to share this with other users, there are now two packaging commands:
 

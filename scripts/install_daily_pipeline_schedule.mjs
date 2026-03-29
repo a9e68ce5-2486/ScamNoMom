@@ -15,7 +15,8 @@ function parseArgs() {
     hour: 3,
     minute: 15,
     uninstall: false,
-    skipFetch: false
+    skipFetch: false,
+    monitor: false
   };
 
   for (let i = 0; i < args.length; i += 1) {
@@ -36,6 +37,10 @@ function parseArgs() {
     }
     if (arg === "--skip-fetch") {
       parsed.skipFetch = true;
+      continue;
+    }
+    if (arg === "--monitor") {
+      parsed.monitor = true;
     }
   }
 
@@ -69,6 +74,18 @@ function pipelineArgs(skipFetch) {
   return args;
 }
 
+function monitorArgs(skipFetch) {
+  const args = [path.join(ROOT, "scripts/daily_monitor.mjs")];
+  if (skipFetch) {
+    args.push("--skip-fetch");
+  }
+  return args;
+}
+
+function scheduledArgs(config) {
+  return config.monitor ? monitorArgs(config.skipFetch) : pipelineArgs(config.skipFetch);
+}
+
 function buildLaunchdPlist(config) {
   const plistPath = path.join(os.homedir(), "Library", "LaunchAgents", `${LABEL}.plist`);
 
@@ -83,7 +100,7 @@ function buildLaunchdPlist(config) {
     <key>ProgramArguments</key>
     <array>
       <string>${process.execPath}</string>
-      ${pipelineArgs(config.skipFetch).map((arg) => `<string>${arg}</string>`).join("\n      ")}
+      ${scheduledArgs(config).map((arg) => `<string>${arg}</string>`).join("\n      ")}
     </array>
     <key>WorkingDirectory</key>
     <string>${ROOT}</string>
@@ -126,7 +143,7 @@ async function uninstallDarwin() {
 }
 
 function buildCronLine(config) {
-  const args = pipelineArgs(config.skipFetch).map((arg) => `"${arg}"`).join(" ");
+  const args = scheduledArgs(config).map((arg) => `"${arg}"`).join(" ");
   return `${config.minute} ${config.hour} * * * cd "${ROOT}" && "${process.execPath}" ${args} >> "${STDOUT_LOG}" 2>> "${STDERR_LOG}" # ${LABEL}`;
 }
 
@@ -184,7 +201,7 @@ async function uninstallLinux() {
 }
 
 async function installWindows(config) {
-  const pipeline = [process.execPath, ...pipelineArgs(config.skipFetch)].join(" ");
+  const pipeline = [process.execPath, ...scheduledArgs(config)].join(" ");
   await runCommand("schtasks", [
     "/Create",
     "/F",
@@ -250,7 +267,7 @@ async function main() {
         ...result,
         schedule: config.uninstall
           ? undefined
-          : { hour: config.hour, minute: config.minute, skipFetch: config.skipFetch },
+          : { hour: config.hour, minute: config.minute, skipFetch: config.skipFetch, monitor: config.monitor },
         logs: {
           stdout: STDOUT_LOG,
           stderr: STDERR_LOG

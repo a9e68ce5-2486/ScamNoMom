@@ -537,6 +537,32 @@ Or reuse already downloaded feeds:
 node scripts/run_pipeline.mjs --skip-fetch
 ```
 
+### Daily Monitor (auto fetch + auto test + anomaly summary)
+
+Run a daily monitor cycle manually:
+
+```bash
+npm run monitor:daily
+```
+
+Or run monitor without fetching new feeds:
+
+```bash
+npm run monitor:daily:skip-fetch
+```
+
+Check the latest monitor status:
+
+```bash
+npm run monitor:status
+```
+
+Outputs:
+
+- `data/processed/daily-monitor-summary.json`
+- `data/processed/daily-monitor-summary.md`
+- `data/processed/daily-monitor-history.json`
+
 This pipeline now also builds a learning profile used by external threat-intel:
 
 - [threat-intel-profile.json](./data/processed/threat-intel-profile.json)

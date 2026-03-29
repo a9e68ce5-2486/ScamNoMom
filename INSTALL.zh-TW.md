@@ -274,6 +274,33 @@ Logs：
 node scripts/install_daily_pipeline_schedule.mjs --hour 3 --minute 15 --skip-fetch
 ```
 
+安裝每日監控模式（自動抓 + 自動測試 + 異常摘要）：
+
+```bash
+node scripts/install_daily_pipeline_schedule.mjs --hour 3 --minute 15 --monitor
+```
+
+監控模式會額外產生：
+
+- `data/processed/daily-monitor-summary.json`
+- `data/processed/daily-monitor-summary.md`
+- `data/processed/daily-monitor-history.json`
+
+可選 webhook 通知：
+
+```bash
+MONITOR_WEBHOOK_URL=https://your-webhook-endpoint
+```
+
+監控門檻可透過環境變數調整：
+
+```bash
+MONITOR_MIN_FEED_SUCCESS_RATE=0.75
+MONITOR_MAX_WARN_RATE_DELTA=0.18
+MONITOR_MIN_ANALYZED=60
+MONITOR_HISTORY_DAYS=120
+```
+
 移除排程：
 
 ```bash
