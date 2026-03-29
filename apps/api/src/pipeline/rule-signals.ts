@@ -10,6 +10,16 @@ export interface RuleSignalSnapshot {
   externalSubmitCount: number;
   mismatchedTextCount: number;
   suspiciousTldCount: number;
+  suspiciousPathKeywordCount: number;
+  suspiciousQueryKeywordCount: number;
+  suspiciousHostnameShape: boolean;
+  hasIpHostname: boolean;
+  isLikelyShortenerHost: boolean;
+  hasPunycodeHostname: boolean;
+  hasLongHostname: boolean;
+  hasDeepSubdomain: boolean;
+  hasLookalikeBrandInHostname: boolean;
+  hasSuspiciousUrlPattern: boolean;
   hiddenElementCount: number;
   iframeCount: number;
   hostnameUsesSuspiciousTld: boolean;
@@ -66,6 +76,89 @@ function isFreemailDomain(domain: string | null): boolean {
   ].includes(domain);
 }
 
+const SHORTENER_HOSTS = new Set([
+  "bit.ly",
+  "tinyurl.com",
+  "t.co",
+  "rb.gy",
+  "reurl.cc",
+  "ppt.cc",
+  "lihi.cc",
+  "cutt.ly",
+  "s.id",
+  "lnk.bio",
+  "linktr.ee"
+]);
+
+const SUSPICIOUS_URL_KEYWORDS = [
+  "login",
+  "verify",
+  "verification",
+  "account",
+  "secure",
+  "security",
+  "update",
+  "unlock",
+  "confirm",
+  "billing",
+  "invoice",
+  "refund",
+  "password",
+  "signin",
+  "banking",
+  "wallet",
+  "gift",
+  "otp"
+];
+
+const HIGH_TRUST_BRAND_HOST_TOKENS = [
+  "apple",
+  "icloud",
+  "microsoft",
+  "google",
+  "paypal",
+  "amazon",
+  "netflix",
+  "steam",
+  "line",
+  "shopee",
+  "momo",
+  "pchome",
+  "ctbc",
+  "cathay",
+  "esun",
+  "taishin",
+  "fubon",
+  "sinopac"
+];
+
+function countTokenMatches(text: string, tokens: string[]): number {
+  const lower = text.toLowerCase();
+  return tokens.reduce((total, token) => (lower.includes(token) ? total + 1 : total), 0);
+}
+
+function isIpv4Hostname(hostname: string): boolean {
+  return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname);
+}
+
+function isLikelyShortener(hostname: string): boolean {
+  if (SHORTENER_HOSTS.has(hostname)) {
+    return true;
+  }
+  return hostname.endsWith(".reurl.cc") || hostname.endsWith(".lihi.cc");
+}
+
+function isSuspiciousHostnameShape(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+  const labels = normalized.split(".").filter(Boolean);
+  const hasManyHyphens = (normalized.match(/-/g) || []).length >= 3;
+  const hasDigitHeavyLabel = labels.some((label) => {
+    const digits = label.replace(/\D/g, "").length;
+    return label.length >= 8 && digits / label.length >= 0.35;
+  });
+  return hasManyHyphens || hasDigitHeavyLabel;
+}
+
 export function extractRuleSignals(features: PageFeatures): RuleSignalSnapshot {
   const emailText = `${features.email?.subject ?? ""} ${features.email?.bodyText ?? ""}`.toLowerCase();
   const fullText = `${features.title ?? ""} ${features.visibleText ?? ""} ${features.email?.subject ?? ""} ${features.email?.bodyText ?? ""}`;
@@ -95,12 +188,42 @@ export function extractRuleSignals(features: PageFeatures): RuleSignalSnapshot {
     features.source === "email" &&
     features.brandSignals.length > 0 &&
     isFreemailDomain(emailSenderDomain);
+  const hostname = String(features.hostname || "").toLowerCase();
+  const parsedUrl = (() => {
+    try {
+      return new URL(features.url);
+    } catch {
+      return null;
+    }
+  })();
+  const pathAndHash = `${parsedUrl?.pathname || ""} ${parsedUrl?.hash || ""}`;
+  const queryText = parsedUrl?.search || "";
+  const labels = hostname.split(".").filter(Boolean);
+  const suspiciousPathKeywordCount = countTokenMatches(pathAndHash, SUSPICIOUS_URL_KEYWORDS);
+  const suspiciousQueryKeywordCount = countTokenMatches(queryText, SUSPICIOUS_URL_KEYWORDS);
+  const hasLookalikeBrandInHostname =
+    HIGH_TRUST_BRAND_HOST_TOKENS.some((token) => hostname.includes(token)) &&
+    features.brandSignals.length === 0;
+  const hasSuspiciousUrlPattern =
+    suspiciousPathKeywordCount + suspiciousQueryKeywordCount >= 2 ||
+    /[?&](token|session|auth|redirect|verify|login)=/i.test(queryText) ||
+    /(signin|verify|login|secure|account)/i.test(pathAndHash);
 
   return {
     hasPasswordFields: features.forms.passwordFields > 0,
     externalSubmitCount: features.forms.externalSubmitCount,
     mismatchedTextCount: features.links.mismatchedTextCount,
     suspiciousTldCount: features.links.suspiciousTldCount,
+    suspiciousPathKeywordCount,
+    suspiciousQueryKeywordCount,
+    suspiciousHostnameShape: isSuspiciousHostnameShape(hostname),
+    hasIpHostname: isIpv4Hostname(hostname),
+    isLikelyShortenerHost: isLikelyShortener(hostname),
+    hasPunycodeHostname: hostname.includes("xn--"),
+    hasLongHostname: hostname.length >= 35,
+    hasDeepSubdomain: labels.length >= 4,
+    hasLookalikeBrandInHostname,
+    hasSuspiciousUrlPattern,
     hiddenElementCount: features.dom.hiddenElementCount,
     iframeCount: features.dom.iframeCount,
     hostnameUsesSuspiciousTld: ["zip", "click", "top", "gq", "work", "country"].includes(hostnameTld),

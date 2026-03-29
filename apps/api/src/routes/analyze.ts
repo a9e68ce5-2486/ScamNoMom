@@ -26,6 +26,23 @@ const pageFeaturesSchema = z.object({
     iframeCount: z.number().int().min(0)
   }),
   brandSignals: z.array(z.string().min(1).max(120)).max(40),
+  urlSignals: z
+    .object({
+      dotCount: z.number().int().min(0).max(30).optional(),
+      hyphenCount: z.number().int().min(0).max(30).optional(),
+      digitCount: z.number().int().min(0).max(40).optional(),
+      length: z.number().int().min(0).max(2048).optional(),
+      hasIpHost: z.boolean().optional(),
+      hasAtSymbol: z.boolean().optional(),
+      hasPunycode: z.boolean().optional(),
+      hasHexEncoding: z.boolean().optional(),
+      hasSuspiciousPathKeyword: z.boolean().optional(),
+      hasSuspiciousQueryKeyword: z.boolean().optional(),
+      hasLongHostname: z.boolean().optional(),
+      hasManySubdomains: z.boolean().optional(),
+      isShortenerHost: z.boolean().optional()
+    })
+    .optional(),
   email: z
     .object({
       provider: z.enum(["gmail", "outlook", "yahoo", "proton", "generic"]),

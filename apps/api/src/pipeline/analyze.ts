@@ -35,7 +35,10 @@ function resolveFinalDecision(score: number): AnalysisResult["recommendedAction"
 export async function analyzeFeatures(features: PageFeatures): Promise<AnalysisResult> {
   const ruleResult = runRuleEngine(features);
   const llmResult = await runLlmAnalyzer(features);
-  const combinedScore = Math.round(ruleResult.score * 0.4 + llmResult.score * 0.6);
+  const urlOnlySample = !String(features.visibleText || "").trim() && (features.forms.total ?? 0) === 0 && (features.dom.iframeCount ?? 0) === 0;
+  const combinedScore = urlOnlySample
+    ? Math.round(ruleResult.score * 0.75 + llmResult.score * 0.25)
+    : Math.round(ruleResult.score * 0.4 + llmResult.score * 0.6);
   const initialRouterDecision = routeDecision(combinedScore);
 
   const agentResult =

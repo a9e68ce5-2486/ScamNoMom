@@ -47,6 +47,21 @@ export interface PageFeatures {
     iframeCount: number;
   };
   brandSignals: string[];
+  urlSignals?: {
+    dotCount?: number;
+    hyphenCount?: number;
+    digitCount?: number;
+    length?: number;
+    hasIpHost?: boolean;
+    hasAtSymbol?: boolean;
+    hasPunycode?: boolean;
+    hasHexEncoding?: boolean;
+    hasSuspiciousPathKeyword?: boolean;
+    hasSuspiciousQueryKeyword?: boolean;
+    hasLongHostname?: boolean;
+    hasManySubdomains?: boolean;
+    isShortenerHost?: boolean;
+  };
   email?: {
     provider: "gmail" | "outlook" | "yahoo" | "proton" | "generic";
     subject?: string;

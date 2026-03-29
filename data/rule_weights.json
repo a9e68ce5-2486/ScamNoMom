@@ -20,5 +20,15 @@
   "emailTraditionalScamLanguage": 16,
   "emailSenderReplyToMismatch": 18,
   "emailBrandDomainMismatch": 16,
-  "emailFreemailBrandClaim": 12
+  "emailFreemailBrandClaim": 12,
+  "urlIpHostname": 26,
+  "urlAtSymbol": 10,
+  "urlExcessiveSubdomains": 10,
+  "urlEncodedChars": 8,
+  "urlLongLength": 6,
+  "urlShortener": 8,
+  "urlUncommonPort": 8,
+  "urlKeywordBase": 12,
+  "urlKeywordPerToken": 4,
+  "urlBrandImpersonation": 34
 }

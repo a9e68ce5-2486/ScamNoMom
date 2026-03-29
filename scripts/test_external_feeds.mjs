@@ -10,9 +10,47 @@ const MD_REPORT_PATH = path.join(OUTPUT_DIR, "external-feeds-test-report.md");
 
 const SAMPLE_LIMIT = Number(process.env.EXTERNAL_FEED_TEST_SAMPLE_LIMIT || 120);
 const TIMEOUT_MS = Number(process.env.EXTERNAL_FEED_TEST_TIMEOUT_MS || 12000);
+const SOURCE_SAMPLE_CAP = Number(process.env.EXTERNAL_FEED_TEST_PER_SOURCE_CAP || 40);
 
 const SUSPICIOUS_TLDS = new Set(["zip", "click", "top", "gq", "work", "country", "xyz", "icu", "shop", "live"]);
 const SHORTENER_HOSTS = new Set(["bit.ly", "tinyurl.com", "t.co", "rb.gy", "reurl.cc", "ppt.cc", "lihi.cc"]);
+const SUSPICIOUS_HOST_TOKENS = [
+  "login",
+  "verify",
+  "secure",
+  "update",
+  "wallet",
+  "support",
+  "account",
+  "icloud",
+  "appleid",
+  "microsoft",
+  "office",
+  "paypal",
+  "steam",
+  "binance",
+  "metamask",
+  "roblox",
+  "gov",
+  "bank"
+];
+const SAFE_BRANDS = [
+  "apple",
+  "icloud",
+  "microsoft",
+  "office",
+  "paypal",
+  "netflix",
+  "steam",
+  "roblox",
+  "amazon",
+  "google",
+  "meta",
+  "line",
+  "shopee",
+  "momo",
+  "pchome"
+];
 
 function safeDivide(numerator, denominator) {
   return denominator ? numerator / denominator : 0;
@@ -39,12 +77,97 @@ function normalizeUrl(value) {
   }
 }
 
-function getHostname(url) {
-  try {
-    return new URL(url).hostname.toLowerCase();
-  } catch {
-    return "";
+function splitHostnameParts(hostname) {
+  return String(hostname || "")
+    .toLowerCase()
+    .split(".")
+    .filter(Boolean);
+}
+
+function hostnameLooksLikeIp(hostname) {
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(String(hostname || ""));
+}
+
+function levenshteinDistance(a, b) {
+  const s = String(a || "");
+  const t = String(b || "");
+  const dp = Array.from({ length: s.length + 1 }, () => new Array(t.length + 1).fill(0));
+  for (let i = 0; i <= s.length; i += 1) {
+    dp[i][0] = i;
   }
+  for (let j = 0; j <= t.length; j += 1) {
+    dp[0][j] = j;
+  }
+  for (let i = 1; i <= s.length; i += 1) {
+    for (let j = 1; j <= t.length; j += 1) {
+      const cost = s[i - 1] === t[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+    }
+  }
+  return dp[s.length][t.length];
+}
+
+function detectBrandTyposquat(hostname) {
+  const compact = String(hostname || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (!compact) {
+    return [];
+  }
+  const hits = [];
+  for (const brand of SAFE_BRANDS) {
+    if (compact.includes(brand)) {
+      continue;
+    }
+    const start = Math.max(0, compact.indexOf(brand[0]) - 1);
+    const end = Math.min(compact.length, start + brand.length + 2);
+    const window = compact.slice(start, end) || compact;
+    const distance = levenshteinDistance(window.slice(0, brand.length), brand);
+    if (distance === 1) {
+      hits.push(brand);
+    }
+  }
+  return hits;
+}
+
+function pickSamples(entries) {
+  const bySource = new Map();
+  for (const entry of entries) {
+    const list = bySource.get(entry.source) || [];
+    list.push(entry);
+    bySource.set(entry.source, list);
+  }
+
+  const sampled = [];
+  const seenUrls = new Set();
+  const sourceOrder = [...bySource.keys()].sort();
+  let active = true;
+  let round = 0;
+
+  while (active && sampled.length < SAMPLE_LIMIT) {
+    active = false;
+    for (const source of sourceOrder) {
+      const list = bySource.get(source) || [];
+      const perSourceCount = sampled.filter((item) => item.source === source).length;
+      if (perSourceCount >= SOURCE_SAMPLE_CAP) {
+        continue;
+      }
+      const entry = list[round];
+      if (!entry) {
+        continue;
+      }
+      active = true;
+      if (seenUrls.has(entry.url)) {
+        continue;
+      }
+      seenUrls.add(entry.url);
+      sampled.push(entry);
+      if (sampled.length >= SAMPLE_LIMIT) {
+        break;
+      }
+    }
+    round += 1;
+  }
+
+  return sampled;
 }
 
 function parseCsvLine(line) {
@@ -178,40 +301,70 @@ async function loadFeedUrls() {
 function buildFeaturesFromUrl(url) {
   const parsed = new URL(url);
   const hostname = parsed.hostname.toLowerCase();
+  const hostnameParts = splitHostnameParts(hostname);
+  const subdomainCount = Math.max(0, hostnameParts.length - 2);
+  const hostJoined = hostnameParts.join(" ");
   const tld = hostname.split(".").pop() || "";
   const pathname = parsed.pathname.toLowerCase();
+  const query = parsed.search.toLowerCase();
   const isShortener = SHORTENER_HOSTS.has(hostname);
   const suspiciousTldCount = SUSPICIOUS_TLDS.has(tld) ? 1 : 0;
+  const suspiciousHostTokenHits = SUSPICIOUS_HOST_TOKENS.filter((token) => hostJoined.includes(token));
+  const typosquatHits = detectBrandTyposquat(hostname);
+  const urlHasAtSign = url.includes("@");
+  const urlHasPort = Boolean(parsed.port);
+  const urlIsIpHost = hostnameLooksLikeIp(hostname);
+  const queryHints = ["redirect", "url=", "next=", "continue=", "token", "session", "verify", "login", "password"].filter(
+    (token) => query.includes(token)
+  );
+  const pathHints = ["login", "verify", "account", "secure", "payment", "invoice", "refund", "otp", "wallet", "support", "signin", "auth"].filter(
+    (token) => pathname.includes(token)
+  );
   const keywordHints = ["login", "verify", "account", "secure", "payment", "invoice", "refund", "otp"]
     .filter((token) => pathname.includes(token))
     .join(" ");
   const visibleText = keywordHints
     ? `External feed URL test sample with suspicious path hints: ${keywordHints}`
     : "External feed URL test sample";
+  const syntheticSignals = [
+    ...pathHints.map((hint) => `path:${hint}`),
+    ...queryHints.map((hint) => `query:${hint}`),
+    ...suspiciousHostTokenHits.map((hint) => `host:${hint}`),
+    ...typosquatHits.map((brand) => `typosquat:${brand}`),
+    ...(urlHasAtSign ? ["url:at-sign"] : []),
+    ...(urlHasPort ? ["url:custom-port"] : []),
+    ...(urlIsIpHost ? ["url:ip-host"] : []),
+    ...(subdomainCount >= 3 ? [`url:deep-subdomain:${subdomainCount}`] : [])
+  ];
+  const textBlob = `${visibleText} ${syntheticSignals.join(" ")}`.trim();
+  const hostnameSet = [hostname];
+  if (isShortener) {
+    hostnameSet.push(hostname);
+  }
 
   return {
     url,
     hostname,
     source: "web",
-    title: parsed.pathname.slice(0, 120) || hostname,
-    visibleText,
+    title: `${hostname} ${parsed.pathname.slice(0, 120)}`.trim().slice(0, 120),
+    visibleText: textBlob.slice(0, 4000),
     forms: {
-      total: 0,
-      passwordFields: pathname.includes("login") || pathname.includes("verify") ? 1 : 0,
+      total: pathHints.length > 0 ? 1 : 0,
+      passwordFields: pathname.includes("login") || pathname.includes("verify") || pathname.includes("signin") ? 1 : 0,
       externalSubmitCount: 0
     },
     links: {
-      total: 1,
-      mismatchedTextCount: 0,
-      suspiciousTldCount,
-      hostnames: [hostname, ...(isShortener ? [hostname] : [])],
+      total: Math.max(1, 1 + queryHints.length),
+      mismatchedTextCount: urlHasAtSign || typosquatHits.length > 0 ? 1 : 0,
+      suspiciousTldCount: suspiciousTldCount + (subdomainCount >= 3 ? 1 : 0),
+      hostnames: hostnameSet.slice(0, 12),
       urls: [url]
     },
     dom: {
       hiddenElementCount: 0,
       iframeCount: 0
     },
-    brandSignals: []
+    brandSignals: [...new Set([...typosquatHits, ...suspiciousHostTokenHits.filter((token) => SAFE_BRANDS.includes(token))])].slice(0, 10)
   };
 }
 
@@ -308,11 +461,11 @@ async function main() {
     throw new Error("No external feed files found. Run `node scripts/fetch_feeds.mjs` first.");
   }
 
-  const sampled = feedEntries.slice(0, SAMPLE_LIMIT);
-  const skippedByLimit = Math.max(0, feedEntries.length - sampled.length);
+  const sampledEntries = pickSamples(feedEntries);
+  const skippedByLimit = Math.max(0, feedEntries.length - sampledEntries.length);
   const records = [];
 
-  for (const entry of sampled) {
+  for (const entry of sampledEntries) {
     const features = buildFeaturesFromUrl(entry.url);
     try {
       const result = await analyzeWithTimeout(analyzeFeatures, features);
@@ -347,7 +500,8 @@ async function main() {
     generatedAt: new Date().toISOString(),
     config: {
       sampleLimit: SAMPLE_LIMIT,
-      timeoutMs: TIMEOUT_MS
+      timeoutMs: TIMEOUT_MS,
+      perSourceCap: SOURCE_SAMPLE_CAP
     },
     summary,
     distribution,

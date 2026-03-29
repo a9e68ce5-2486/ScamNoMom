@@ -47,6 +47,59 @@ export function runRuleEngine(features: PageFeatures): RuleResult {
     reasons.push("Page hostname uses a suspicious top-level domain.");
   }
 
+  if (signals.hasIpHostname) {
+    score += weights.urlIpHostname;
+    reasons.push("Page hostname uses a raw IP address, uncommon for legitimate login flows.");
+  }
+
+  if (signals.hasPunycodeHostname) {
+    score += weights.urlEncodedChars;
+    reasons.push("Hostname uses punycode/IDN encoding, which can indicate lookalike-domain abuse.");
+  }
+
+  if (signals.hasLongHostname) {
+    score += weights.urlLongLength;
+    reasons.push("Hostname length is unusually long for a normal service domain.");
+  }
+
+  if (signals.hasDeepSubdomain) {
+    score += weights.urlExcessiveSubdomains;
+    reasons.push("Hostname contains many subdomain levels, a common obfuscation pattern.");
+  }
+
+  if (signals.hasLookalikeBrandInHostname) {
+    score += weights.urlBrandImpersonation;
+    reasons.push("Hostname text looks like a brand-impersonation domain pattern.");
+  }
+
+  if (signals.suspiciousPathKeywordCount + signals.suspiciousQueryKeywordCount > 0) {
+    const keywordScore =
+      weights.urlKeywordBase +
+      (signals.suspiciousPathKeywordCount + signals.suspiciousQueryKeywordCount) * weights.urlKeywordPerToken;
+    score += keywordScore;
+    reasons.push("URL path/query includes phishing bait keywords.");
+  }
+
+  if (signals.suspiciousQueryKeywordCount > 0) {
+    score += weights.urlEncodedChars;
+    reasons.push("URL query uses suspicious keys (token/session/redirect) often used in phishing links.");
+  }
+
+  if (signals.isLikelyShortenerHost) {
+    score += weights.urlShortener;
+    reasons.push("URL uses a link shortener, which can hide final destination.");
+  }
+
+  if (signals.suspiciousHostnameShape) {
+    score += weights.urlExcessiveSubdomains;
+    reasons.push("Hostname shape is unusual (digit-heavy or hyphen-heavy), a common obfuscation pattern.");
+  }
+
+  if (features.url.startsWith("http://")) {
+    score += weights.urlUncommonPort;
+    reasons.push("URL uses HTTP instead of HTTPS.");
+  }
+
   if (signals.brandOnCredentialPage) {
     score += weights.brandOnCredentialPage;
     reasons.push("Brand-like language appears on a credential collection page.");
