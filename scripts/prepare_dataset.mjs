@@ -51,6 +51,10 @@ function normalizeUrl(value) {
     return "";
   }
 
+  if (!/^https?:\/\//i.test(url) && /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(url)) {
+    return `https://${url}`;
+  }
+
   try {
     return new URL(url).toString();
   } catch {
@@ -266,13 +270,75 @@ async function loadOpenPhishSamples(files) {
   return samples;
 }
 
+async function loadUrlHausSamples(files) {
+  const targetFiles = files.filter((file) => /urlhaus/i.test(path.basename(file)));
+  const samples = [];
+
+  for (const file of targetFiles) {
+    const raw = await readFile(file, "utf8");
+    const lines = raw
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#"));
+
+    for (const [index, line] of lines.entries()) {
+      const columns = parseCsvLine(line);
+      const urlCandidate = columns[2] || columns[1] || columns[0] || "";
+      const sample = openPhishUrlToSample(urlCandidate, index);
+      if (sample) {
+        samples.push({
+          ...sample,
+          id: `urlhaus_${index}`,
+          provenance: {
+            ...sample.provenance,
+            sourceName: "urlhaus"
+          }
+        });
+      }
+    }
+  }
+
+  return samples;
+}
+
+async function loadPhishingArmySamples(files) {
+  const targetFiles = files.filter((file) => /phishing[_-]?army/i.test(path.basename(file)));
+  const samples = [];
+
+  for (const file of targetFiles) {
+    const raw = await readFile(file, "utf8");
+    const lines = raw
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#"));
+
+    for (const [index, line] of lines.entries()) {
+      const sample = openPhishUrlToSample(line, index);
+      if (sample) {
+        samples.push({
+          ...sample,
+          id: `phishing_army_${index}`,
+          provenance: {
+            ...sample.provenance,
+            sourceName: "phishing_army"
+          }
+        });
+      }
+    }
+  }
+
+  return samples;
+}
+
 async function main() {
   const feedbackRecords = await readJsonArray(FEEDBACK_PATH);
   const externalFiles = await listExternalFiles();
   const feedbackSamples = feedbackRecords.map(toTrainingSample);
   const phishTankSamples = await loadPhishTankSamples(externalFiles);
   const openPhishSamples = await loadOpenPhishSamples(externalFiles);
-  const samples = [...feedbackSamples, ...phishTankSamples, ...openPhishSamples];
+  const urlHausSamples = await loadUrlHausSamples(externalFiles);
+  const phishingArmySamples = await loadPhishingArmySamples(externalFiles);
+  const samples = [...feedbackSamples, ...phishTankSamples, ...openPhishSamples, ...urlHausSamples, ...phishingArmySamples];
 
   await mkdir(OUTPUT_DIR, { recursive: true });
   await writeFile(OUTPUT_PATH, JSON.stringify(samples, null, 2));
@@ -284,6 +350,8 @@ async function main() {
         inputFeedbackRecords: feedbackRecords.length,
         inputPhishTankSamples: phishTankSamples.length,
         inputOpenPhishSamples: openPhishSamples.length,
+        inputUrlHausSamples: urlHausSamples.length,
+        inputPhishingArmySamples: phishingArmySamples.length,
         outputSamples: samples.length,
         outputPath: OUTPUT_PATH
       },

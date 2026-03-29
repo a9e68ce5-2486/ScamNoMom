@@ -45,7 +45,23 @@ node scripts/fetch_feeds.mjs
 PHISHTANK_APP_KEY=your_app_key
 PHISHTANK_USER_AGENT=scamnomom/your-name
 OPENPHISH_FEED_URL=https://openphish.com/feed.txt
+URLHAUS_FEED_URL=https://urlhaus.abuse.ch/downloads/csv_online/
+PHISHING_ARMY_FEED_URL=https://phishing.army/download/phishing_army_blocklist_extended.txt
+FEED_FETCH_RETRY_MAX=3
+FEED_FETCH_TIMEOUT_MS=12000
+FEED_FETCH_REQUIRE_ALL=false
 ```
+
+`fetch_feeds.mjs` 目前會自動嘗試抓取：
+
+- PhishTank（JSON）
+- OpenPhish（TXT）
+- URLhaus（CSV）
+- Phishing Army（TXT）
+
+抓取後會輸出狀態檔：
+
+- `data/raw/external/feed-status.json`
 
 ### Extension feedback
 

@@ -28,6 +28,10 @@ function normalizeUrl(value) {
     return "";
   }
 
+  if (!/^https?:\/\//i.test(raw) && /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(raw)) {
+    return `https://${raw}`;
+  }
+
   try {
     return new URL(raw).toString();
   } catch {
@@ -122,7 +126,15 @@ async function loadFeedUrls() {
 
   for (const filePath of files) {
     const baseName = path.basename(filePath).toLowerCase();
-    const source = baseName.includes("phishtank") ? "phishtank" : baseName.includes("openphish") ? "openphish" : "other";
+    const source = baseName.includes("phishtank")
+      ? "phishtank"
+      : baseName.includes("openphish")
+        ? "openphish"
+        : baseName.includes("urlhaus")
+          ? "urlhaus"
+          : baseName.includes("phishing_army") || baseName.includes("phishing-army")
+            ? "phishing_army"
+            : "other";
     const raw = await readFile(filePath, "utf8");
     let urls = [];
 
@@ -130,7 +142,7 @@ async function loadFeedUrls() {
       urls = raw
         .split(/\r?\n/)
         .map((line) => line.trim())
-        .filter(Boolean);
+        .filter((line) => line && !line.startsWith("#"));
     } else if (baseName.endsWith(".json")) {
       const parsed = JSON.parse(raw);
       urls = Array.isArray(parsed) ? extractUrlsFromJsonArray(parsed) : [];

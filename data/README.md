@@ -45,6 +45,11 @@ Optional environment variables:
 PHISHTANK_APP_KEY=your_app_key
 PHISHTANK_USER_AGENT=scamnomom/your-name
 OPENPHISH_FEED_URL=https://openphish.com/feed.txt
+URLHAUS_FEED_URL=https://urlhaus.abuse.ch/downloads/csv_online/
+PHISHING_ARMY_FEED_URL=https://phishing.army/download/phishing_army_blocklist_extended.txt
+FEED_FETCH_RETRY_MAX=3
+FEED_FETCH_TIMEOUT_MS=12000
+FEED_FETCH_REQUIRE_ALL=false
 ```
 
 ### Extension feedback
@@ -102,6 +107,8 @@ The script merges:
 - extension feedback
 - PhishTank URLs
 - OpenPhish URLs
+- URLhaus URLs
+- Phishing Army URLs
 
 into:
 
