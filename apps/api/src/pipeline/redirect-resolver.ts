@@ -68,12 +68,16 @@ function isDisallowedHostname(hostname: string): boolean {
     return isPrivateIpv4(normalized);
   }
 
+  const isIpv6Literal = normalized.includes(":");
   if (
-    normalized === "::1" ||
-    normalized === "0:0:0:0:0:0:0:1" ||
-    normalized.startsWith("fe80:") ||
-    normalized.startsWith("fc") ||
-    normalized.startsWith("fd")
+    isIpv6Literal &&
+    (
+      normalized === "::1" ||
+      normalized === "0:0:0:0:0:0:0:1" ||
+      normalized.startsWith("fe80:") ||
+      normalized.startsWith("fc") ||
+      normalized.startsWith("fd")
+    )
   ) {
     return true;
   }

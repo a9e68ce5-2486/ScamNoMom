@@ -39,8 +39,8 @@ const pageFeaturesSchema = z.object({
 });
 
 export const analyzeRouter = Router();
-const MAX_LINK_HOSTNAMES = 60;
-const MAX_LINK_URLS = 60;
+const MAX_LINK_HOSTNAMES = 40;
+const MAX_LINK_URLS = 40;
 
 analyzeRouter.post("/", async (req, res) => {
   const parsed = pageFeaturesSchema.safeParse(req.body);

@@ -207,6 +207,7 @@ Feedback is then converted into a training-ready dataset and used to mine emergi
 - `/` service summary
 - `/health`
 - `POST /analyze`
+- `POST /analyze/text`
 - `POST /feedback`
 - `GET /feedback/stats`
 
@@ -562,7 +563,7 @@ node scripts/run_pipeline.mjs --skip-fetch
 ## Current Limitations
 
 - webmail extraction is DOM-based, so selectors may need maintenance
-- no WHOIS, blacklist, or sandbox agent tools yet
+- external threat-intel support is partial and configurable (RDAP / blacklist hooks), not a full sandboxed threat-intel agent
 - no production database yet
 - no full model fine-tuning workflow yet
 - trend mining is candidate generation, not autonomous rule deployment

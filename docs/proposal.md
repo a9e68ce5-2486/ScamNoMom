@@ -87,7 +87,7 @@ This weight can later be tuned from offline evaluation and user feedback.
 
 - `0-39`: allow
 - `40-69`: escalate to agent
-- `70-100`: warn immediately
+- `70-100`: block immediately
 
 ### Agent Layer
 

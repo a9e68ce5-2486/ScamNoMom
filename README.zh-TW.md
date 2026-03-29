@@ -179,6 +179,7 @@ Extension popup 支援：
 - `/` 服務摘要
 - `/health`
 - `POST /analyze`
+- `POST /analyze/text`
 - `POST /feedback`
 - `GET /feedback/stats`
 

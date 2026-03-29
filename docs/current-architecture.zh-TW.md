@@ -405,15 +405,28 @@ Final Score = 0.4 * Rule Score + 0.6 * LLM Score
 
 ## 9. 目前未完成但規劃中的部分
 
-目前還沒有真正落地的部分包括：
+以下改成「已落地 / 部分落地 / 尚未落地」三層，避免和上文重複或矛盾：
 
-- 外部 threat-intel agent
-- WHOIS / DNS / blacklist 查詢
-- redirect chain 展開
-- SPF / DKIM / DMARC 檢查
-- 自動 rule auto-tuning
-- RL policy learning
-- 完整單元測試 / e2e 測試
+### 9.1 已落地（可在 repo 內直接使用）
+
+- redirect / short-link 解析（agent second pass）
+- DNS / local feed second pass
+- 可選外部 RDAP 與 generic blacklist 查詢（`THREAT_INTEL_MODE=auto`）
+- sender domain 的 SPF / DKIM / DMARC domain-level 訊號
+- feedback 評估（`npm run evaluate`）與規則建議（`npm run tune:rules`）
+
+### 9.2 部分落地（有骨架，但不是完整版本）
+
+- 外部 threat-intel agent：目前是 second pass + 可選外部查詢，尚未有完整多工具代理工作流
+- email authenticity：目前以 domain-level 訊號為主，尚未做到完整原始標頭驗證（header-level pass/fail）
+- 自動化流程：已可安裝排程，但預設仍偏本地研究/實驗流程
+
+### 9.3 尚未落地（下一階段）
+
+- 完整 WHOIS / sandbox simulation 型 agent 工具整合
+- 自動 rule auto-tuning 寫回與安全審核流程
+- RL policy learning 實驗到可用閉環
+- 完整單元測試 / e2e 測試矩陣
 
 ## 10. 總結
 
