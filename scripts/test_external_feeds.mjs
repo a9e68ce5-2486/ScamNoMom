@@ -8,7 +8,7 @@ const OUTPUT_DIR = path.join(ROOT, "data/processed");
 const JSON_REPORT_PATH = path.join(OUTPUT_DIR, "external-feeds-test-report.json");
 const MD_REPORT_PATH = path.join(OUTPUT_DIR, "external-feeds-test-report.md");
 
-const SAMPLE_LIMIT = Number(process.env.EXTERNAL_FEED_TEST_SAMPLE_LIMIT || 120);
+const SAMPLE_LIMIT = Number(process.env.EXTERNAL_FEED_TEST_SAMPLE_LIMIT || 240);
 const TIMEOUT_MS = Number(process.env.EXTERNAL_FEED_TEST_TIMEOUT_MS || 12000);
 const SOURCE_SAMPLE_CAP = Number(process.env.EXTERNAL_FEED_TEST_PER_SOURCE_CAP || 40);
 

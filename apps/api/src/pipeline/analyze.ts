@@ -2,6 +2,7 @@ import { runAgentAnalyzer } from "./agent-analyzer.js";
 import { runLlmAnalyzer } from "./llm-analyzer.js";
 import { routeDecision } from "./router.js";
 import { runRuleEngine } from "./rule-engine.js";
+import { analyzeUrlRisk } from "./url-risk-analyzer.js";
 import type { AnalysisResult, PageFeatures, RiskLevel } from "../types/analysis.js";
 
 function scoreToRiskLevel(score: number): RiskLevel {
@@ -34,11 +35,17 @@ function resolveFinalDecision(score: number): AnalysisResult["recommendedAction"
 
 export async function analyzeFeatures(features: PageFeatures): Promise<AnalysisResult> {
   const ruleResult = runRuleEngine(features);
+  const urlRisk = analyzeUrlRisk(features);
   const llmResult = await runLlmAnalyzer(features);
   const urlOnlySample = !String(features.visibleText || "").trim() && (features.forms.total ?? 0) === 0 && (features.dom.iframeCount ?? 0) === 0;
-  const combinedScore = urlOnlySample
-    ? Math.round(ruleResult.score * 0.75 + llmResult.score * 0.25)
-    : Math.round(ruleResult.score * 0.4 + llmResult.score * 0.6);
+  const combinedScore = Math.round(
+    Math.max(
+      urlOnlySample
+        ? ruleResult.score * 0.6 + llmResult.score * 0.15 + urlRisk.score * 0.25
+        : ruleResult.score * 0.35 + llmResult.score * 0.45 + urlRisk.score * 0.2,
+      urlRisk.score * (urlOnlySample ? 1.0 : 0.9)
+    )
+  );
   const initialRouterDecision = routeDecision(combinedScore);
 
   const agentResult =
@@ -52,8 +59,8 @@ export async function analyzeFeatures(features: PageFeatures): Promise<AnalysisR
   const finalScore = agentResult?.score ?? combinedScore;
   const finalDecision = agentResult ? resolveFinalDecision(finalScore) : initialRouterDecision;
   const finalReasons = agentResult
-    ? [...new Set([...mergeReasons(ruleResult.reasons, llmResult.reasons), ...agentResult.reasons])]
-    : mergeReasons(ruleResult.reasons, llmResult.reasons);
+    ? [...new Set([...mergeReasons([...ruleResult.reasons, ...urlRisk.reasons], llmResult.reasons), ...agentResult.reasons])]
+    : mergeReasons([...ruleResult.reasons, ...urlRisk.reasons], llmResult.reasons);
   const finalAttackType = agentResult?.attackType ?? llmResult.attackType;
   const finalConfidence = agentResult
     ? Math.max(llmResult.confidence, agentResult.confidence)
@@ -72,7 +79,7 @@ export async function analyzeFeatures(features: PageFeatures): Promise<AnalysisR
     provider: llmResult.provider,
     agent: agentResult ?? undefined,
     evidence: {
-      ruleScore: ruleResult.score,
+      ruleScore: Math.max(ruleResult.score, urlRisk.score),
       llmScore: llmResult.score,
       routerDecision: finalDecision,
       agentScore: agentResult?.score,

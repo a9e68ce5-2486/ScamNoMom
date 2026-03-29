@@ -167,6 +167,7 @@ export interface AnalysisResult {
   evidence: {
     ruleScore: number;
     llmScore: number;
+    urlRiskScore?: number;
     routerDecision: Decision;
     agentScore?: number;
     initialRouterDecision?: Decision;

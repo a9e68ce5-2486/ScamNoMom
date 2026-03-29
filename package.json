@@ -20,6 +20,8 @@
     "monitor:daily:skip-fetch": "node scripts/daily_monitor.mjs --skip-fetch",
     "monitor:status": "node scripts/check_daily_monitor_status.mjs",
     "test:external-feeds": "cd apps/api && npm run build && cd ../.. && node scripts/test_external_feeds.mjs",
+    "calibrate:external-thresholds": "node scripts/calibrate_external_thresholds.mjs",
+    "test:external-feeds:auto-threshold": "cd apps/api && npm run build && cd ../.. && EXTERNAL_FEED_TEST_AUTO_THRESHOLD=1 node scripts/test_external_feeds.mjs",
     "test:threat-intel": "cd apps/api && npm run build && cd ../.. && node scripts/test_threat_intel_policy.mjs",
     "test:smoke": "cd apps/api && npm run build && cd ../.. && node scripts/smoke_test.mjs",
     "benchmark": "cd apps/api && npm run build && cd ../.. && node scripts/benchmark_analyzer.mjs",

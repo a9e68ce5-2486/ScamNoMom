@@ -79,6 +79,16 @@ analyzeRouter.post("/", async (req, res) => {
     });
   }
 
+  if (parsed.data.urlSignals) {
+    const urlSignalKeys = Object.keys(parsed.data.urlSignals);
+    if (urlSignalKeys.length > 24) {
+      return res.status(400).json({
+        error: "Too many urlSignals entries in payload",
+        limit: 24
+      });
+    }
+  }
+
   const result = await analyzeFeatures(parsed.data);
   return res.json(result);
 });

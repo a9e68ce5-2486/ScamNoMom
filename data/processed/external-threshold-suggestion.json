@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-03-29T09:05:26.024Z",
+  "sourceReport": "/workspace/data/processed/external-feeds-test-report.json",
+  "sampleCount": 30,
+  "quantiles": {
+    "p70": 20,
+    "p85": 24,
+    "p90": 32.2,
+    "p95": 52.35
+  },
+  "suggestedThresholds": {
+    "warnThreshold": 22,
+    "blockThreshold": 42
+  },
+  "impliedActionDistribution": {
+    "allow": 23,
+    "warn": 4,
+    "block": 3
+  }
+}
