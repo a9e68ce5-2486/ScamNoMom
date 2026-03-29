@@ -119,6 +119,18 @@ function buildFallbackResult(features: PageFeatures): LlmResult {
     reasons.push("QR-code-based scam language was detected.");
   }
 
+  if (/atm|otp|驗證碼|一次性密碼|不要掛電話|客服專員|解除分期/i.test(text)) {
+    score += 20;
+    reasons.push("Taiwan phone/social-engineering transfer script was detected.");
+    attackType = attackType === "unknown" ? "phone_scam" : attackType;
+  }
+
+  if (/遊戲點數|gift card|虛擬點數|mycard|gash|steam/i.test(text)) {
+    score += 16;
+    reasons.push("Gift-card or virtual-point transfer script was detected.");
+    attackType = attackType === "unknown" ? "payment_fraud" : attackType;
+  }
+
   const normalizedScore = Math.max(0, Math.min(100, Math.round(score)));
 
   return {

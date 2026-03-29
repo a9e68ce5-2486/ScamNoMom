@@ -27,6 +27,7 @@ function scoreToDecision(score: number): Decision {
 
 export async function analyzeText(input: TextAnalysisInput): Promise<AnalysisResult> {
   const text = `${input.title ?? ""} ${input.text}`.toLowerCase();
+  const twText = `${input.title ?? ""} ${input.text}`;
   let ruleScore = 0;
   let llmScore = 0;
   const reasons: string[] = [];
@@ -100,6 +101,24 @@ export async function analyzeText(input: TextAnalysisInput): Promise<AnalysisRes
     llmScore += 18;
     reasons.push("Message contains romance-scam or trust-building transfer cues.");
     attackType = attackType === "unknown" ? "romance_scam" : attackType;
+  }
+
+  if (/網拍|二手|拍賣|facebook market|旋轉拍賣|賣貨便|交貨便|私下交易|跳過平台|改line/i.test(text)) {
+    llmScore += 20;
+    reasons.push("Message resembles off-platform transaction scam patterns common in Taiwan.");
+    attackType = attackType === "unknown" ? "payment_fraud" : attackType;
+  }
+
+  if (/遊戲點數|買點數|購買點數|steam卡|apple禮品卡|google play卡|超商代碼繳費/i.test(text)) {
+    llmScore += 26;
+    reasons.push("Message requests gift cards or game points, a common transfer fraud pattern.");
+    attackType = attackType === "unknown" ? "phone_scam" : attackType;
+  }
+
+  if (/監管帳戶|安全帳戶|資金保全|凍結帳戶|配合調查|地檢署|警政署|刑事局/i.test(twText)) {
+    llmScore += 24;
+    reasons.push("Message includes fake law-enforcement or judicial transfer narratives.");
+    attackType = attackType === "unknown" ? "government_impersonation" : attackType;
   }
 
   const combinedScore = Math.max(0, Math.min(100, Math.round(ruleScore * 0.55 + llmScore * 0.45)));

@@ -3,7 +3,7 @@ import { getMatchedKeywords, hasKeywordMatch } from "../config/tw-scam-keywords.
 import type { PageFeatures } from "../types/analysis.js";
 
 const TW_TRUST_BRAND_PATTERN =
-  /國泰|玉山|台新|中信|中國信託|富邦|永豐|兆豐|郵局|蝦皮|momo|pchome|露天|博客來|line|街口|全支付|全盈\+pay|7-11|統一超商|全家|黑貓|新竹物流|宅配通/;
+  /國泰|玉山|台新|中信|中國信託|富邦|永豐|兆豐|郵局|蝦皮|momo|pchome|露天|博客來|line|街口|全支付|全盈\+pay|7-11|統一超商|全家|黑貓|新竹物流|宅配通|監理站|國稅局|健保署|地檢署|警政署/;
 
 export interface RuleSignalSnapshot {
   hasPasswordFields: boolean;
@@ -69,6 +69,7 @@ function isFreemailDomain(domain: string | null): boolean {
 export function extractRuleSignals(features: PageFeatures): RuleSignalSnapshot {
   const emailText = `${features.email?.subject ?? ""} ${features.email?.bodyText ?? ""}`.toLowerCase();
   const fullText = `${features.title ?? ""} ${features.visibleText ?? ""} ${features.email?.subject ?? ""} ${features.email?.bodyText ?? ""}`;
+  const normalizedText = fullText.toLowerCase();
   const mismatchedBrands = findMismatchedBrands(features.hostname, features.brandSignals).map((entry) => entry.brand);
   const mismatchedBrandLinks = findMismatchedBrandLinks(features.links.hostnames, features.brandSignals).map((entry) => entry.brand);
   const hostnameTld = features.hostname.split(".").pop()?.toLowerCase() ?? "";
@@ -121,7 +122,9 @@ export function extractRuleSignals(features: PageFeatures): RuleSignalSnapshot {
     emailHasManyLinks: (features.email?.linkCount ?? 0) > 3,
     emailLinkMismatch: features.links.mismatchedTextCount > 0,
     emailHighTrustSenderStyle: Boolean(features.email?.sender && /support|security|billing|admin|no-reply/i.test(features.email.sender)),
-    emailUrgencyLanguage: /\bverify\b|\breset\b|\burgent\b|\bsuspended\b|\bconfirm\b/.test(emailText),
+    emailUrgencyLanguage:
+      /\bverify\b|\breset\b|\burgent\b|\bsuspended\b|\bconfirm\b/.test(emailText) ||
+      /(立即|緊急|24小時內|今日內|帳戶異常|停權|停用)/.test(normalizedText),
     emailTraditionalScamLanguage: emailMatchedKeywords.length > 0,
     emailSenderDomain,
     emailReplyToDomain,
