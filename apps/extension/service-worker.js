@@ -1,9 +1,15 @@
 const DEFAULT_SETTINGS = {
   apiBaseUrl: "http://localhost:8787",
   overlayEnabled: true,
-  autoRescanEnabled: true
+  autoRescanEnabled: true,
+  notificationMode: "standard",
+  temporaryTrustedHosts: {}
 };
 const REQUEST_TIMEOUT_MS = 8000;
+const TRUST_HOST_TTL_MS = 24 * 60 * 60 * 1000;
+const IGNORE_ONCE_TTL_MS = 2 * 60 * 60 * 1000;
+const IGNORE_ONCE_KEY = "ignoreOnceUrls";
+const MAX_TRUSTED_HOSTS = 300;
 
 function normalizeApiBaseUrl(value) {
   const raw = String(value || "").trim();
@@ -29,10 +35,185 @@ function normalizeApiBaseUrl(value) {
 
 async function getSettings() {
   const { settings } = await chrome.storage.sync.get(["settings"]);
-  return {
+  const effective = sanitizeSettings({
     ...DEFAULT_SETTINGS,
     ...(settings || {})
+  });
+  if (JSON.stringify(settings || {}) !== JSON.stringify(effective)) {
+    await chrome.storage.sync.set({ settings: effective });
+  }
+  return effective;
+}
+
+function normalizeHostname(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizeNotificationMode(value) {
+  const candidate = String(value || "").trim().toLowerCase();
+  if (candidate === "quiet" || candidate === "standard" || candidate === "sensitive") {
+    return candidate;
+  }
+  return "standard";
+}
+
+function sanitizeSettings(rawSettings) {
+  const now = Date.now();
+  const normalizedTrustedHosts = {};
+  const trustedHosts = rawSettings?.temporaryTrustedHosts || {};
+  for (const [host, expiresAt] of Object.entries(trustedHosts)) {
+    const normalizedHost = normalizeHostname(host);
+    const expiry = Number(expiresAt);
+    if (!normalizedHost || !Number.isFinite(expiry) || expiry <= now) {
+      continue;
+    }
+    normalizedTrustedHosts[normalizedHost] = expiry;
+    if (Object.keys(normalizedTrustedHosts).length >= MAX_TRUSTED_HOSTS) {
+      break;
+    }
+  }
+
+  return {
+    ...DEFAULT_SETTINGS,
+    ...rawSettings,
+    apiBaseUrl: rawSettings?.apiBaseUrl || DEFAULT_SETTINGS.apiBaseUrl,
+    overlayEnabled: typeof rawSettings?.overlayEnabled === "boolean" ? rawSettings.overlayEnabled : DEFAULT_SETTINGS.overlayEnabled,
+    autoRescanEnabled:
+      typeof rawSettings?.autoRescanEnabled === "boolean" ? rawSettings.autoRescanEnabled : DEFAULT_SETTINGS.autoRescanEnabled,
+    notificationMode: normalizeNotificationMode(rawSettings?.notificationMode),
+    temporaryTrustedHosts: normalizedTrustedHosts
   };
+}
+
+async function setTrustedHost(hostname) {
+  const normalizedHost = normalizeHostname(hostname);
+  if (!normalizedHost) {
+    throw new Error("No valid hostname to trust.");
+  }
+  const settings = await getSettings();
+  const next = {
+    ...settings.temporaryTrustedHosts,
+    [normalizedHost]: Date.now() + TRUST_HOST_TTL_MS
+  };
+  const sanitized = sanitizeSettings({
+    ...settings,
+    temporaryTrustedHosts: next
+  });
+  await chrome.storage.sync.set({ settings: sanitized });
+  return {
+    hostname: normalizedHost,
+    expiresAt: sanitized.temporaryTrustedHosts[normalizedHost]
+  };
+}
+
+async function removeTrustedHost(hostname) {
+  const normalizedHost = normalizeHostname(hostname);
+  const settings = await getSettings();
+  const next = {
+    ...settings.temporaryTrustedHosts
+  };
+  delete next[normalizedHost];
+  await chrome.storage.sync.set({
+    settings: sanitizeSettings({
+      ...settings,
+      temporaryTrustedHosts: next
+    })
+  });
+}
+
+async function clearTrustedHosts() {
+  const settings = await getSettings();
+  await chrome.storage.sync.set({
+    settings: sanitizeSettings({
+      ...settings,
+      temporaryTrustedHosts: {}
+    })
+  });
+}
+
+function normalizePageUrl(url) {
+  const raw = String(url || "").trim();
+  if (!raw) {
+    throw new Error("URL is empty.");
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error("URL is invalid.");
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("URL must use http or https.");
+  }
+
+  parsed.hash = "";
+  return parsed.toString();
+}
+
+async function setIgnoreOnceUrl(url) {
+  const normalizedUrl = normalizePageUrl(url);
+  const { [IGNORE_ONCE_KEY]: ignoreMap } = await chrome.storage.local.get([IGNORE_ONCE_KEY]);
+  const next = {
+    ...(ignoreMap || {}),
+    [normalizedUrl]: Date.now() + IGNORE_ONCE_TTL_MS
+  };
+  await chrome.storage.local.set({
+    [IGNORE_ONCE_KEY]: next
+  });
+  return normalizedUrl;
+}
+
+async function consumeIgnoreOnceUrl(url) {
+  const normalizedUrl = normalizePageUrl(url);
+  const { [IGNORE_ONCE_KEY]: ignoreMap } = await chrome.storage.local.get([IGNORE_ONCE_KEY]);
+  const now = Date.now();
+  const current = ignoreMap || {};
+  const next = {};
+  let matched = false;
+
+  for (const [entryUrl, expiresAt] of Object.entries(current)) {
+    const expiry = Number(expiresAt);
+    if (!Number.isFinite(expiry) || expiry <= now) {
+      continue;
+    }
+    if (entryUrl === normalizedUrl && !matched) {
+      matched = true;
+      continue;
+    }
+    next[entryUrl] = expiry;
+  }
+
+  await chrome.storage.local.set({
+    [IGNORE_ONCE_KEY]: next
+  });
+  return matched;
+}
+
+async function resolveSuppression(payload, settings) {
+  const trustedHostExpiry = settings.temporaryTrustedHosts[normalizeHostname(payload?.hostname)];
+  if (Number.isFinite(trustedHostExpiry) && trustedHostExpiry > Date.now()) {
+    return {
+      active: true,
+      type: "trusted_host",
+      message: "Suppressed by temporary trust for this host.",
+      expiresAt: trustedHostExpiry
+    };
+  }
+
+  if (payload?.url) {
+    const ignored = await consumeIgnoreOnceUrl(payload.url).catch(() => false);
+    if (ignored) {
+      return {
+        active: true,
+        type: "ignore_once",
+        message: "Suppressed once for this URL."
+      };
+    }
+  }
+
+  return null;
 }
 
 async function fetchJsonWithTimeout(url, init) {
@@ -83,13 +264,20 @@ async function submitFeedback(payload) {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "PHISHGUARD_ANALYZE_PAGE") {
-    analyzePayload(message.payload)
-    .then(async (result) => {
+    Promise.all([analyzePayload(message.payload), getSettings()])
+    .then(async ([result, settings]) => {
+      const suppression = await resolveSuppression(message.payload, settings);
+      const enhancedResult = suppression
+        ? {
+            ...result,
+            suppression
+          }
+        : result;
       await chrome.storage.local.set({
-        latestAnalysis: result,
+        latestAnalysis: enhancedResult,
         latestFeatures: message.payload
       });
-      sendResponse({ ok: true, result });
+      sendResponse({ ok: true, result: enhancedResult });
     })
     .catch(async (error) => {
       const fallback = {
@@ -153,6 +341,34 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         sendResponse({ ok: false, error: error.message });
       });
 
+    return true;
+  }
+
+  if (message?.type === "PHISHGUARD_IGNORE_CURRENT_URL_ONCE") {
+    setIgnoreOnceUrl(message.payload?.url || "")
+      .then((url) => sendResponse({ ok: true, url }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (message?.type === "PHISHGUARD_TRUST_CURRENT_HOST") {
+    setTrustedHost(message.payload?.hostname || "")
+      .then((result) => sendResponse({ ok: true, ...result }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (message?.type === "PHISHGUARD_REMOVE_TRUSTED_HOST") {
+    removeTrustedHost(message.payload?.hostname || "")
+      .then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (message?.type === "PHISHGUARD_CLEAR_TRUSTED_HOSTS") {
+    clearTrustedHosts()
+      .then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;
   }
 

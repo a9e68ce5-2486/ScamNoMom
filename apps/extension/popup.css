@@ -267,10 +267,11 @@ h2 {
 .feedback-actions {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .feedback-btn {
-  flex: 1;
+  flex: 1 1 140px;
   border: 1px solid rgba(53, 39, 22, 0.14);
   border-radius: 14px;
   padding: 11px 12px;
@@ -284,6 +285,57 @@ h2 {
 
 .feedback-btn-danger {
   background: rgba(255, 224, 220, 0.8);
+}
+
+.feedback-btn-muted {
+  background: rgba(255, 246, 211, 0.82);
+}
+
+.feedback-btn-neutral {
+  background: rgba(232, 239, 255, 0.82);
+}
+
+.suppression-banner {
+  border: 1px solid rgba(37, 90, 160, 0.24);
+  background: rgba(231, 240, 255, 0.75);
+}
+
+.suppression-banner p {
+  margin: 8px 0 0;
+}
+
+.suppression-text {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.quick-actions {
+  border: 1px dashed rgba(92, 65, 35, 0.28);
+  background: rgba(255, 250, 235, 0.74);
+}
+
+.scenario {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.scenario-tip {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.scenario-list {
+  margin-top: 10px;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
+.scenario-list li {
+  margin-bottom: 5px;
 }
 
 .feedback-btn:disabled {

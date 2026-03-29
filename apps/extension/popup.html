@@ -42,6 +42,11 @@
         </div>
       </section>
 
+      <section id="suppression-banner" class="panel suppression-banner" hidden>
+        <strong>Safety override is active</strong>
+        <p id="suppression-text">This result is currently suppressed.</p>
+      </section>
+
       <section class="panel facts">
         <div class="fact">
           <span class="fact-label">Attack type</span>
@@ -88,6 +93,14 @@
         </ul>
       </section>
 
+      <section class="panel action-playbook scenario">
+        <h2>Recommended Next Steps</h2>
+        <p id="action-guide" class="scenario-tip">No immediate action.</p>
+        <ul id="next-steps">
+          <li>No immediate action.</li>
+        </ul>
+      </section>
+
       <section class="panel feedback-panel">
         <div class="feedback-header">
           <h2>Teach ScamNoMom</h2>
@@ -96,6 +109,10 @@
         <div class="feedback-actions">
           <button id="mark-safe-btn" class="feedback-btn" type="button">Mark Safe</button>
           <button id="mark-phishing-btn" class="feedback-btn feedback-btn-danger" type="button">Mark Phishing</button>
+        </div>
+        <div id="quick-actions" class="feedback-actions quick-actions">
+          <button id="ignore-once-btn" class="feedback-btn" type="button">Ignore Once</button>
+          <button id="trust-host-btn" class="feedback-btn" type="button">Trust Host (24h)</button>
         </div>
       </section>
 

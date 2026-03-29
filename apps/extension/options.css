@@ -121,6 +121,59 @@ input[type="url"] {
   line-height: 1.45;
 }
 
+.field select {
+  width: 100%;
+  border: 1px solid rgba(70, 45, 19, 0.16);
+  border-radius: 14px;
+  padding: 13px 14px;
+  background: rgba(255, 255, 255, 0.88);
+  font: inherit;
+  color: var(--ink);
+}
+
+.strategy-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.strategy {
+  border: 1px solid rgba(83, 56, 28, 0.18);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.strategy strong {
+  display: block;
+  font-size: 13px;
+}
+
+.strategy small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.trusted-hosts {
+  border: 1px dashed rgba(83, 56, 28, 0.22);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.45);
+  display: grid;
+  gap: 8px;
+}
+
+.trusted-hosts strong {
+  font-size: 14px;
+}
+
+.trusted-hosts .hint {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .actions {
   display: flex;
   align-items: center;

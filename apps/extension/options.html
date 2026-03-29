@@ -21,6 +21,22 @@
           <span class="hint">Use the local API address that serves `/analyze` and `/feedback`.</span>
         </label>
 
+        <label class="field">
+          <span class="label">Notification Strategy</span>
+          <select id="notification-mode">
+            <option value="quiet">Quiet (high risk only)</option>
+            <option value="standard">Standard (recommended)</option>
+            <option value="sensitive">Sensitive (more alerts)</option>
+          </select>
+          <span class="hint">Choose how aggressively ScamNoMom shows in-page warnings.</span>
+        </label>
+
+        <div class="trusted-hosts">
+          <strong>Temporary Trusted Hosts</strong>
+          <span id="trusted-hosts-info" class="hint">No temporary trusted hosts.</span>
+          <span class="hint">Hosts trusted from popup quick action are valid for 24 hours.</span>
+        </div>
+
         <label class="toggle">
           <input id="overlay-enabled" type="checkbox" />
           <span>
@@ -40,6 +56,7 @@
         <div class="actions">
           <button id="save-btn" class="primary-btn" type="button">Save Settings</button>
           <button id="reset-btn" class="ghost-btn" type="button">Reset Defaults</button>
+          <button id="clear-trusted-btn" class="ghost-btn" type="button">Clear Temporary Trusted Hosts</button>
           <span id="status" class="status">Ready</span>
         </div>
       </section>

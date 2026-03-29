@@ -20,7 +20,8 @@ function countSuspiciousTlds(links) {
 const DEFAULT_SETTINGS = {
   apiBaseUrl: "http://localhost:8787",
   overlayEnabled: true,
-  autoRescanEnabled: true
+  autoRescanEnabled: true,
+  notificationMode: "standard"
 };
 
 function getSettings(callback) {
@@ -476,26 +477,69 @@ function appendReasonList(container, reasons) {
   }
 }
 
-function shouldShowOverlay(result) {
+function normalizeNotificationMode(value) {
+  const mode = String(value || "").toLowerCase();
+  if (mode === "quiet" || mode === "standard" || mode === "sensitive") {
+    return mode;
+  }
+  return "standard";
+}
+
+function shouldShowOverlay(result, settings) {
+  if (!result || result?.suppression?.active) {
+    return false;
+  }
+
+  const notificationMode = normalizeNotificationMode(settings?.notificationMode);
+  if (result.analysisUnavailable) {
+    return true;
+  }
+
+  const action = String(result.recommendedAction || "allow");
+  const riskLevel = String(result.riskLevel || "low");
+  const score = Number(result.score || 0);
+
+  if (notificationMode === "quiet") {
+    return action === "block" || riskLevel === "high" || score >= 80;
+  }
+
+  if (notificationMode === "sensitive") {
+    return action !== "allow" || riskLevel !== "low" || score >= 28;
+  }
+
   return Boolean(
-    result &&
-    (
-      result.analysisUnavailable ||
-      (
-        (result.recommendedAction === "warn" || result.recommendedAction === "block" || result.recommendedAction === "escalate") &&
-        (result.riskLevel === "medium" || result.riskLevel === "high")
-      )
-    )
+    (action === "warn" || action === "block" || action === "escalate") &&
+    (riskLevel === "medium" || riskLevel === "high")
   );
 }
 
-function renderOverlay(result) {
+function buildOverlayActionHint(result) {
+  const type = String(result?.attackType || "");
+  if (type === "customer_service_scam" || type === "phone_scam") {
+    return "不要操作 ATM 或提供驗證碼；先撥 165 反詐騙專線確認。";
+  }
+  if (type === "investment_scam") {
+    return "不要加入投資群或匯款入金；先用官方管道核實。";
+  }
+  if (type === "government_impersonation") {
+    return "政府通知請改用官方網站/App 查詢，不要直接點訊息連結。";
+  }
+  if (type === "payment_fraud") {
+    return "暫停付款，改從官方 App 或客服電話自行查證。";
+  }
+  if (type === "credential_harvest" || type === "brand_impersonation") {
+    return "不要輸入帳密；改手動輸入官方網址登入確認。";
+  }
+  return "若有疑慮請先停止操作，改走官方管道查證。";
+}
+
+function renderOverlay(result, settings) {
   const existing = document.getElementById("phishguard-overlay");
   if (existing) {
     existing.remove();
   }
 
-  if (!shouldShowOverlay(result)) {
+  if (!shouldShowOverlay(result, settings)) {
     return;
   }
 
@@ -529,6 +573,7 @@ function renderOverlay(result) {
     : isEmail
       ? "Review the sender, links, and request before replying or clicking."
       : "Open the extension popup for the full breakdown.";
+  const hint = buildOverlayActionHint(result);
 
   overlay.innerHTML = `
     <div class="phishguard-header">
@@ -568,6 +613,7 @@ function renderOverlay(result) {
       </div>
       <ul class="phishguard-reasons"></ul>
       <div class="phishguard-footer"></div>
+      <div class="phishguard-footer phishguard-hint"></div>
     </div>
   `;
 
@@ -580,7 +626,7 @@ function renderOverlay(result) {
   const confidenceEl = overlay.querySelector(".phishguard-confidence");
   const providerEl = overlay.querySelector(".phishguard-provider");
   const reasonsEl = overlay.querySelector(".phishguard-reasons");
-  const footerEl = overlay.querySelector(".phishguard-footer");
+  const footerEls = overlay.querySelectorAll(".phishguard-footer");
 
   if (kickerEl) {
     kickerEl.textContent = kicker;
@@ -609,8 +655,11 @@ function renderOverlay(result) {
   if (reasonsEl) {
     appendReasonList(reasonsEl, topReasons);
   }
-  if (footerEl) {
-    footerEl.textContent = footer;
+  if (footerEls[0]) {
+    footerEls[0].textContent = footer;
+  }
+  if (footerEls[1]) {
+    footerEls[1].textContent = hint;
   }
 
   overlay.querySelector(".phishguard-close")?.addEventListener("click", () => {
@@ -731,9 +780,9 @@ function analyzeCurrentPage(sendResponse) {
         }
 
         if (settings.overlayEnabled) {
-          renderOverlay(response?.result);
+          renderOverlay(response?.result, settings);
         } else {
-          renderOverlay(null);
+          renderOverlay(null, settings);
         }
 
         sendResponse?.(response ?? { ok: false, error: "No analysis response." });
