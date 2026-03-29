@@ -34,5 +34,8 @@
     "service:uninstall": "node scripts/install_api_service_schedule.mjs --uninstall",
     "release:extension": "node scripts/package_extension_release.mjs",
     "release:bundle": "node scripts/package_portable_bundle.mjs"
+  },
+  "dependencies": {
+    "jsdom": "^29.0.1"
   }
 }

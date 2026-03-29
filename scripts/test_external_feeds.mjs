@@ -1,6 +1,7 @@
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { JSDOM } from "jsdom";
 
 const ROOT = process.cwd();
 const EXTERNAL_DIR = path.join(ROOT, "data/raw/external");
@@ -11,6 +12,10 @@ const MD_REPORT_PATH = path.join(OUTPUT_DIR, "external-feeds-test-report.md");
 const SAMPLE_LIMIT = Number(process.env.EXTERNAL_FEED_TEST_SAMPLE_LIMIT || 240);
 const TIMEOUT_MS = Number(process.env.EXTERNAL_FEED_TEST_TIMEOUT_MS || 12000);
 const SOURCE_SAMPLE_CAP = Number(process.env.EXTERNAL_FEED_TEST_PER_SOURCE_CAP || 40);
+const FETCH_TIMEOUT_MS = Number(process.env.EXTERNAL_FEED_FETCH_TIMEOUT_MS || 8000);
+const MAX_HTML_BYTES = Number(process.env.EXTERNAL_FEED_MAX_HTML_BYTES || 512000);
+const MAX_VISIBLE_TEXT_LENGTH = Number(process.env.EXTERNAL_FEED_MAX_VISIBLE_TEXT_LENGTH || 5000);
+const CAPTURE_CONCURRENCY = Number(process.env.EXTERNAL_FEED_CAPTURE_CONCURRENCY || 8);
 
 const SUSPICIOUS_TLDS = new Set(["zip", "click", "top", "gq", "work", "country", "xyz", "icu", "shop", "live"]);
 const SHORTENER_HOSTS = new Set(["bit.ly", "tinyurl.com", "t.co", "rb.gy", "reurl.cc", "ppt.cc", "lihi.cc"]);
@@ -58,6 +63,11 @@ function safeDivide(numerator, denominator) {
 
 function round(value) {
   return Number(value.toFixed(4));
+}
+
+function countOf(value, regex) {
+  const matches = String(value || "").match(regex);
+  return matches ? matches.length : 0;
 }
 
 function normalizeUrl(value) {
@@ -368,6 +378,250 @@ function buildFeaturesFromUrl(url) {
   };
 }
 
+function cleanVisibleText(text) {
+  return String(text || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_VISIBLE_TEXT_LENGTH);
+}
+
+function collectBrandSignalsFromText(text) {
+  const lower = String(text || "").toLowerCase();
+  return SAFE_BRANDS.filter((brand) => lower.includes(brand)).slice(0, 12);
+}
+
+function countSuspiciousTldsFromAnchors(anchors, pageUrl) {
+  let count = 0;
+  for (const anchor of anchors) {
+    const href = anchor.getAttribute("href") || "";
+    if (!href) {
+      continue;
+    }
+    try {
+      const parsed = new URL(href, pageUrl);
+      const tld = parsed.hostname.split(".").pop()?.toLowerCase();
+      if (tld && SUSPICIOUS_TLDS.has(tld)) {
+        count += 1;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return count;
+}
+
+function countMismatchedAnchors(anchors, pageUrl) {
+  let count = 0;
+  for (const anchor of anchors) {
+    const text = (anchor.textContent || "").trim();
+    const href = anchor.getAttribute("href") || "";
+    if (!text || !href) {
+      continue;
+    }
+    try {
+      const parsed = new URL(href, pageUrl);
+      if (text.includes(".") && !text.toLowerCase().includes(parsed.hostname.toLowerCase())) {
+        count += 1;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return count;
+}
+
+function collectAnchorHostnames(anchors, pageUrl, limit = 12) {
+  const seen = new Set();
+  const hostnames = [];
+  for (const anchor of anchors) {
+    const href = anchor.getAttribute("href") || "";
+    if (!href) {
+      continue;
+    }
+    try {
+      const hostname = new URL(href, pageUrl).hostname.toLowerCase();
+      if (!hostname || seen.has(hostname)) {
+        continue;
+      }
+      seen.add(hostname);
+      hostnames.push(hostname);
+      if (hostnames.length >= limit) {
+        break;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return hostnames;
+}
+
+function collectAnchorUrls(anchors, pageUrl, limit = 12) {
+  const seen = new Set();
+  const urls = [];
+  for (const anchor of anchors) {
+    const href = anchor.getAttribute("href") || "";
+    if (!href) {
+      continue;
+    }
+    try {
+      const normalized = new URL(href, pageUrl).toString();
+      if (!normalized || seen.has(normalized)) {
+        continue;
+      }
+      seen.add(normalized);
+      urls.push(normalized);
+      if (urls.length >= limit) {
+        break;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return urls;
+}
+
+async function fetchHtmlWithTimeout(url, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8"
+      }
+    });
+    const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    if (!contentType.includes("text/html")) {
+      throw new Error(`Non-HTML response (${contentType || "unknown"})`);
+    }
+    const html = await response.text();
+    if (!html) {
+      throw new Error("Empty HTML response");
+    }
+    return html.slice(0, MAX_HTML_BYTES);
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error(`HTML fetch timeout after ${timeoutMs}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function buildFeaturesFromHtml(url, html) {
+  const dom = new JSDOM(html);
+  const { document } = dom.window;
+  const title = (document.title || "").trim();
+  const bodyText = cleanVisibleText(document.body?.textContent || "");
+  const anchors = Array.from(document.querySelectorAll("a[href]"));
+  const forms = Array.from(document.querySelectorAll("form"));
+  const passwordFields = document.querySelectorAll("input[type='password']").length;
+  const hiddenElements = document.querySelectorAll("[hidden], [style*='display:none'], [style*='visibility:hidden']").length;
+  const iframeCount = document.querySelectorAll("iframe").length;
+  const externalSubmitCount = forms.filter((form) => {
+    const action = form.getAttribute("action") || "";
+    if (!action) {
+      return false;
+    }
+    try {
+      return new URL(action, url).hostname.toLowerCase() !== new URL(url).hostname.toLowerCase();
+    } catch {
+      return false;
+    }
+  }).length;
+  const suspiciousTldCount = countSuspiciousTldsFromAnchors(anchors, url);
+  const mismatchedTextCount = countMismatchedAnchors(anchors, url);
+  const linkHostnames = collectAnchorHostnames(anchors, url);
+  const linkUrls = collectAnchorUrls(anchors, url);
+  const brandSignals = collectBrandSignalsFromText(`${title} ${bodyText}`);
+  const parsedUrl = new URL(url);
+
+  return {
+    url,
+    hostname: parsedUrl.hostname.toLowerCase(),
+    source: "web",
+    title: title || parsedUrl.hostname,
+    visibleText: bodyText || "External feed URL test sample",
+    forms: {
+      total: forms.length,
+      passwordFields,
+      externalSubmitCount
+    },
+    links: {
+      total: anchors.length,
+      mismatchedTextCount,
+      suspiciousTldCount,
+      hostnames: linkHostnames,
+      urls: linkUrls.length > 0 ? linkUrls : [url]
+    },
+    dom: {
+      hiddenElementCount: hiddenElements,
+      iframeCount
+    },
+    brandSignals,
+    urlSignals: {
+      dotCount: countOf(parsedUrl.hostname, /\./g),
+      hyphenCount: countOf(parsedUrl.hostname, /-/g),
+      digitCount: countOf(parsedUrl.hostname, /\d/g),
+      length: url.length,
+      hasIpHost: hostnameLooksLikeIp(parsedUrl.hostname),
+      hasAtSymbol: url.includes("@"),
+      hasPunycode: parsedUrl.hostname.includes("xn--"),
+      hasHexEncoding: /%[0-9a-f]{2}/i.test(url),
+      hasSuspiciousPathKeyword: /(login|verify|account|secure|signin|auth)/i.test(parsedUrl.pathname),
+      hasSuspiciousQueryKeyword: /(token|session|redirect|verify|login|password)/i.test(parsedUrl.search),
+      hasLongHostname: parsedUrl.hostname.length >= 35,
+      hasManySubdomains: splitHostnameParts(parsedUrl.hostname).length >= 4,
+      isShortenerHost: SHORTENER_HOSTS.has(parsedUrl.hostname.toLowerCase())
+    }
+  };
+}
+
+async function buildFeaturesFromLivePageOrUrl(url) {
+  try {
+    const html = await fetchHtmlWithTimeout(url, FETCH_TIMEOUT_MS);
+    const features = buildFeaturesFromHtml(url, html);
+    return {
+      features,
+      captureMode: "live_dom"
+    };
+  } catch (error) {
+    return {
+      features: buildFeaturesFromUrl(url),
+      captureMode: "url_only",
+      captureError: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+async function processWithConcurrency(items, concurrency, worker) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function runOne() {
+    while (true) {
+      const index = nextIndex;
+      nextIndex += 1;
+      if (index >= items.length) {
+        return;
+      }
+      results[index] = await worker(items[index], index);
+    }
+  }
+
+  const runners = Array.from({ length: Math.max(1, Math.min(concurrency, items.length)) }, () => runOne());
+  await Promise.all(runners);
+  return results;
+}
+
 async function analyzeWithTimeout(analyzeFeatures, features) {
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(() => reject(new Error(`analysis timeout after ${TIMEOUT_MS}ms`)), TIMEOUT_MS);
@@ -388,11 +642,16 @@ function computeSummary(records, totalInput, skipped) {
         record.result.recommendedAction === "escalate")
   ).length;
   const failed = records.filter((record) => record.error).length;
+  const liveDomCount = records.filter((record) => record.captureMode === "live_dom").length;
+  const urlOnlyCount = records.filter((record) => record.captureMode === "url_only").length;
   return {
     totalInput,
     skippedByLimit: skipped,
     analyzed,
     failed,
+    liveDomCount,
+    urlOnlyCount,
+    liveDomRate: round(safeDivide(liveDomCount, analyzed)),
     highOrBlockedRate: round(safeDivide(highOrBlocked, analyzed)),
     warnOrAboveRate: round(safeDivide(warnOrAbove, analyzed))
   };
@@ -463,14 +722,15 @@ async function main() {
 
   const sampledEntries = pickSamples(feedEntries);
   const skippedByLimit = Math.max(0, feedEntries.length - sampledEntries.length);
-  const records = [];
-
-  for (const entry of sampledEntries) {
-    const features = buildFeaturesFromUrl(entry.url);
+  const records = await processWithConcurrency(sampledEntries, CAPTURE_CONCURRENCY, async (entry) => {
+    const capture = await buildFeaturesFromLivePageOrUrl(entry.url);
+    const features = capture.features;
     try {
       const result = await analyzeWithTimeout(analyzeFeatures, features);
-      records.push({
+      return {
         ...entry,
+        captureMode: capture.captureMode,
+        captureError: capture.captureError,
         result: {
           score: result.score,
           riskLevel: result.riskLevel,
@@ -479,14 +739,16 @@ async function main() {
           needsAgent: result.needsAgent,
           attackType: result.attackType
         }
-      });
+      };
     } catch (error) {
-      records.push({
+      return {
         ...entry,
+        captureMode: capture.captureMode,
+        captureError: capture.captureError,
         error: error instanceof Error ? error.message : String(error)
-      });
+      };
     }
-  }
+  });
 
   const summary = computeSummary(records, feedEntries.length, skippedByLimit);
   const distribution = {
@@ -501,7 +763,9 @@ async function main() {
     config: {
       sampleLimit: SAMPLE_LIMIT,
       timeoutMs: TIMEOUT_MS,
-      perSourceCap: SOURCE_SAMPLE_CAP
+      perSourceCap: SOURCE_SAMPLE_CAP,
+      fetchTimeoutMs: FETCH_TIMEOUT_MS,
+      captureConcurrency: CAPTURE_CONCURRENCY
     },
     summary,
     distribution,
