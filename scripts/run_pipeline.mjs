@@ -42,6 +42,9 @@ async function main() {
   await runNodeScript(path.join(ROOT, "scripts/generate_tw_dashboard.mjs"));
   steps.push("generate_tw_dashboard");
 
+  await runNodeScript(path.join(ROOT, "scripts/build_threat_intel_profile.mjs"));
+  steps.push("build_threat_intel_profile");
+
   console.log(
     JSON.stringify(
       {

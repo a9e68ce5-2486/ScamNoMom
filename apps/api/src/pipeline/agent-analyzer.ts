@@ -50,6 +50,23 @@ export interface AgentAnalyzerResult {
         provider?: string;
         reason?: string;
       };
+      providers?: Array<{
+        provider: string;
+        checked: boolean;
+        scoreDelta: number;
+        confidence: number;
+        reasons: string[];
+      }>;
+      policy?: {
+        providerCount: number;
+        positiveProviderCount: number;
+        rawScoreDelta: number;
+        adjustedScoreDelta: number;
+        finalScoreDelta: number;
+        confidence: number;
+        capApplied: boolean;
+        penaltyApplied: boolean;
+      };
     };
     emailAuth?: {
       domain: string;
@@ -178,7 +195,12 @@ export async function runAgentAnalyzer(features: PageFeatures, input: AgentAnaly
     })
   ].filter(Boolean);
   const threatIntel = await runThreatIntel(threatIntelHosts, emailSenderDomain);
-  const externalThreatIntel = await runExternalThreatIntel(features.hostname);
+  const externalThreatIntel = await runExternalThreatIntel({
+    primaryHostname: features.hostname,
+    relatedHostnames: threatIntelHosts,
+    text: visibleText,
+    brandSignals: features.brandSignals
+  });
   const emailAuthIntel =
     features.source === "email" ? await runEmailAuthIntel(emailSenderDomain, features.brandSignals.length > 0) : null;
 
@@ -273,7 +295,15 @@ export async function runAgentAnalyzer(features: PageFeatures, input: AgentAnaly
       external: {
         enabled: externalThreatIntel.enabled,
         rdap: externalThreatIntel.rdap,
-        blacklist: externalThreatIntel.blacklist
+        blacklist: externalThreatIntel.blacklist,
+        providers: externalThreatIntel.providers.map((provider) => ({
+          provider: provider.provider,
+          checked: provider.checked,
+          scoreDelta: provider.scoreDelta,
+          confidence: provider.confidence,
+          reasons: provider.reasons
+        })),
+        policy: externalThreatIntel.policy
       },
       emailAuth: emailAuthIntel
         ? {

@@ -88,6 +88,29 @@ const analysisSchema = z.object({
                   provider: z.string().optional(),
                   reason: z.string().optional()
                 })
+                .optional(),
+              providers: z
+                .array(
+                  z.object({
+                    provider: z.string(),
+                    checked: z.boolean(),
+                    scoreDelta: z.number(),
+                    confidence: z.number().min(0).max(1),
+                    reasons: z.array(z.string())
+                  })
+                )
+                .optional(),
+              policy: z
+                .object({
+                  providerCount: z.number().int().min(0),
+                  positiveProviderCount: z.number().int().min(0),
+                  rawScoreDelta: z.number().min(0),
+                  adjustedScoreDelta: z.number().min(0),
+                  finalScoreDelta: z.number().min(0),
+                  confidence: z.number().min(0).max(1),
+                  capApplied: z.boolean(),
+                  penaltyApplied: z.boolean()
+                })
                 .optional()
             })
             .optional(),

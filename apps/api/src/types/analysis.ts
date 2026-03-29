@@ -120,6 +120,23 @@ export interface AnalysisResult {
           provider?: string;
           reason?: string;
         };
+        providers?: Array<{
+          provider: string;
+          checked: boolean;
+          scoreDelta: number;
+          confidence: number;
+          reasons: string[];
+        }>;
+        policy?: {
+          providerCount: number;
+          positiveProviderCount: number;
+          rawScoreDelta: number;
+          adjustedScoreDelta: number;
+          finalScoreDelta: number;
+          confidence: number;
+          capApplied: boolean;
+          penaltyApplied: boolean;
+        };
       };
       emailAuth?: {
         domain: string;

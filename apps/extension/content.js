@@ -671,8 +671,52 @@ function collectFeatures() {
   };
 }
 
+function fingerprintFeatures(features) {
+  const parts = [
+    features.hostname || "",
+    features.source || "",
+    features.title || "",
+    features.visibleText || "",
+    String(features.forms?.total ?? 0),
+    String(features.forms?.passwordFields ?? 0),
+    String(features.forms?.externalSubmitCount ?? 0),
+    String(features.links?.total ?? 0),
+    String(features.links?.mismatchedTextCount ?? 0),
+    String(features.links?.suspiciousTldCount ?? 0),
+    (features.links?.hostnames || []).slice(0, 8).join("|"),
+    (features.links?.urls || []).slice(0, 8).join("|"),
+    (features.brandSignals || []).slice(0, 8).join("|"),
+    features.email?.provider || "",
+    features.email?.subject || "",
+    features.email?.sender || "",
+    features.email?.replyTo || "",
+    features.email?.bodyText || "",
+    String(features.email?.linkCount ?? 0)
+  ];
+  return parts.join("::");
+}
+
+let lastFeatureFingerprint = "";
+let lastAnalyzeTs = 0;
+const MIN_ANALYZE_INTERVAL_MS = 5000;
+
 function analyzeCurrentPage(sendResponse) {
   const features = collectFeatures();
+  const nextFingerprint = fingerprintFeatures(features);
+  const now = Date.now();
+  const withinCooldown = now - lastAnalyzeTs < MIN_ANALYZE_INTERVAL_MS;
+  const samePayload = nextFingerprint === lastFeatureFingerprint;
+
+  if (!sendResponse && samePayload) {
+    return;
+  }
+
+  if (!sendResponse && withinCooldown) {
+    return;
+  }
+
+  lastFeatureFingerprint = nextFingerprint;
+  lastAnalyzeTs = now;
 
   getSettings((settings) => {
     chrome.runtime.sendMessage(
@@ -710,7 +754,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 analyzeCurrentPage();
 
 let rescanDebounce;
+let mutationCountSinceLastScan = 0;
+const MIN_MUTATIONS_FOR_RESCAN = 3;
 const observer = new MutationObserver(() => {
+  mutationCountSinceLastScan += 1;
   clearTimeout(rescanDebounce);
   rescanDebounce = setTimeout(() => {
     getSettings((settings) => {
@@ -718,6 +765,11 @@ const observer = new MutationObserver(() => {
         return;
       }
 
+      if (mutationCountSinceLastScan < MIN_MUTATIONS_FOR_RESCAN) {
+        return;
+      }
+
+      mutationCountSinceLastScan = 0;
       analyzeCurrentPage();
     });
   }, 1200);

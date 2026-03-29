@@ -1,4 +1,9 @@
-import { getThreatIntelConfig, shouldUseExternalThreatIntel } from "../config/threat-intel.js";
+import { getThreatIntelConfig, shouldUseExternalThreatIntel, type ThreatIntelConfig } from "../config/threat-intel.js";
+import {
+  EXTERNAL_THREAT_INTEL_PROVIDERS,
+  type ExternalThreatIntelInput,
+  type ExternalThreatIntelProviderResult
+} from "./external-threat-providers.js";
 
 export interface ExternalThreatIntelResult {
   enabled: boolean;
@@ -15,7 +20,19 @@ export interface ExternalThreatIntelResult {
     provider?: string;
     reason?: string;
   };
+  providers: ExternalThreatIntelProviderResult[];
+  policy: {
+    providerCount: number;
+    positiveProviderCount: number;
+    rawScoreDelta: number;
+    adjustedScoreDelta: number;
+    finalScoreDelta: number;
+    confidence: number;
+    capApplied: boolean;
+    penaltyApplied: boolean;
+  };
   reasons: string[];
+  confidence: number;
   scoreDelta: number;
 }
 
@@ -23,195 +40,127 @@ function normalizeHostname(value: string): string {
   return String(value || "").trim().toLowerCase();
 }
 
-function createTimeoutSignal(timeoutMs: number): { signal: AbortSignal; cleanup: () => void } {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  return {
-    signal: controller.signal,
-    cleanup: () => clearTimeout(timer)
-  };
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
-function isHostnameEligible(hostname: string): boolean {
-  return Boolean(hostname) && !/^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname) && hostname.includes(".");
-}
+export function applyThreatIntelPolicy(
+  providerResults: ExternalThreatIntelProviderResult[],
+  config: ThreatIntelConfig
+): ExternalThreatIntelResult["policy"] {
+  const scoreContributors = providerResults.filter((result) => result.scoreDelta > 0);
+  const rawScoreDelta = providerResults.reduce((sum, result) => sum + Math.max(0, result.scoreDelta), 0);
+  let adjustedScoreDelta = rawScoreDelta;
+  let penaltyApplied = false;
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error(`${label} timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-
-    promise
-      .then((value) => {
-        clearTimeout(timer);
-        resolve(value);
-      })
-      .catch((error) => {
-        clearTimeout(timer);
-        reject(error);
-      });
-  });
-}
-
-async function fetchJson(url: string, init: RequestInit, timeoutMs: number, label: string): Promise<unknown> {
-  const { signal, cleanup } = createTimeoutSignal(timeoutMs);
-  try {
-    const response = await withTimeout(
-      fetch(url, {
-        ...init,
-        signal
-      }),
-      timeoutMs,
-      label
-    );
-    if (!response.ok) {
-      throw new Error(`${label} returned ${response.status}`);
-    }
-    return response.json();
-  } catch (error) {
-    if ((error as { name?: string }).name === "AbortError") {
-      throw new Error(`${label} timed out after ${timeoutMs}ms`);
-    }
-    throw error;
-  } finally {
-    cleanup();
-  }
-}
-
-function parseRdapDate(events: unknown[], target: string): string | undefined {
-  const event = events.find((entry) => {
-    const action = String((entry as { eventAction?: string })?.eventAction || "").toLowerCase();
-    return action === target;
-  }) as { eventDate?: string } | undefined;
-
-  return event?.eventDate;
-}
-
-async function fetchRdap(hostname: string): Promise<ExternalThreatIntelResult["rdap"] | undefined> {
-  const config = getThreatIntelConfig();
-  if (!config.rdapBaseUrl || !isHostnameEligible(hostname)) {
-    return undefined;
+  if (scoreContributors.length === 1 && rawScoreDelta > 0) {
+    adjustedScoreDelta = Math.round(rawScoreDelta * config.policy.singleProviderPenalty);
+    penaltyApplied = true;
   }
 
-  const raw = (await fetchJson(
-    `${config.rdapBaseUrl.replace(/\/+$/, "")}/${encodeURIComponent(hostname)}`,
-    {
-      method: "GET",
-      headers: {
-        "User-Agent": "scamnomom/external-threat-intel"
-      }
-    },
-    config.timeoutMs,
-    "RDAP lookup"
-  )) as {
-    events?: unknown[];
-    entities?: Array<{ vcardArray?: unknown[]; roles?: string[]; handle?: string }>;
-  };
+  if (scoreContributors.length >= 2 && adjustedScoreDelta > 0) {
+    adjustedScoreDelta += config.policy.multiProviderBoost;
+  }
 
-  const events = Array.isArray(raw.events) ? raw.events : [];
-  const registrationDate = parseRdapDate(events, "registration");
-  const lastChangedDate = parseRdapDate(events, "last changed");
-  const now = Date.now();
-  const registrationTime = registrationDate ? Date.parse(registrationDate) : NaN;
-  const domainAgeDays = Number.isFinite(registrationTime) ? Math.floor((now - registrationTime) / 86_400_000) : undefined;
-  const registrarEntity = Array.isArray(raw.entities)
-    ? raw.entities.find((entry) => Array.isArray(entry.roles) && entry.roles.some((role) => String(role).toLowerCase() === "registrar"))
-    : undefined;
+  const finalScoreDelta = clamp(Math.round(adjustedScoreDelta), 0, config.policy.maxScoreDelta);
+  const confidenceBase = scoreContributors.length
+    ? scoreContributors.reduce((sum, result) => sum + result.confidence, 0) / scoreContributors.length
+    : 0.35;
+  const confidence = clamp(
+    confidenceBase + (scoreContributors.length >= 2 ? 0.08 : 0) - (penaltyApplied ? 0.04 : 0),
+    0.2,
+    0.95
+  );
 
   return {
-    hostname,
-    registrationDate,
-    lastChangedDate,
-    registrar: registrarEntity?.handle,
-    domainAgeDays
+    providerCount: providerResults.length,
+    positiveProviderCount: scoreContributors.length,
+    rawScoreDelta: Math.round(rawScoreDelta),
+    adjustedScoreDelta: Math.round(adjustedScoreDelta),
+    finalScoreDelta,
+    confidence: Number(confidence.toFixed(3)),
+    capApplied: finalScoreDelta < Math.round(adjustedScoreDelta),
+    penaltyApplied
   };
 }
 
-async function fetchGenericBlacklist(hostname: string): Promise<ExternalThreatIntelResult["blacklist"] | undefined> {
-  const config = getThreatIntelConfig();
-  if (!config.blacklist.baseUrl || !hostname) {
-    return undefined;
-  }
-
-  const url = new URL(config.blacklist.baseUrl);
-  url.searchParams.set(config.blacklist.queryParam, hostname);
-
-  const headers: Record<string, string> = {
-    "User-Agent": "scamnomom/external-threat-intel"
-  };
-
-  if (config.blacklist.apiKey) {
-    headers[config.blacklist.apiKeyHeader] = config.blacklist.apiKey;
-  }
-
-  const raw = (await fetchJson(
-    url.toString(),
-    {
-      method: "GET",
-      headers
-    },
-    config.timeoutMs,
-    "Blacklist lookup"
-  )) as {
-    listed?: boolean;
-    blocked?: boolean;
-    malicious?: boolean;
-    provider?: string;
-    source?: string;
-    reason?: string;
-    description?: string;
-  };
-
-  const listed = Boolean(raw.listed || raw.blocked || raw.malicious);
-  return {
-    checked: true,
-    listed,
-    provider: raw.provider || raw.source || "generic",
-    reason: raw.reason || raw.description
-  };
-}
-
-export async function runExternalThreatIntel(hostname: string): Promise<ExternalThreatIntelResult> {
+export async function runExternalThreatIntel(input: ExternalThreatIntelInput): Promise<ExternalThreatIntelResult> {
   if (!shouldUseExternalThreatIntel()) {
     return {
       enabled: false,
+      providers: [],
+      policy: {
+        providerCount: 0,
+        positiveProviderCount: 0,
+        rawScoreDelta: 0,
+        adjustedScoreDelta: 0,
+        finalScoreDelta: 0,
+        confidence: 0,
+        capApplied: false,
+        penaltyApplied: false
+      },
       reasons: [],
+      confidence: 0,
       scoreDelta: 0
     };
   }
 
-  const normalizedHostname = normalizeHostname(hostname);
-  const reasons: string[] = [];
-  let scoreDelta = 0;
+  const config = getThreatIntelConfig();
+  const normalizedInput: ExternalThreatIntelInput = {
+    ...input,
+    primaryHostname: normalizeHostname(input.primaryHostname),
+    relatedHostnames: [...new Set((input.relatedHostnames || []).map(normalizeHostname).filter(Boolean))]
+  };
 
-  const [rdap, blacklist] = await Promise.all([
-    fetchRdap(normalizedHostname).catch(() => undefined),
-    fetchGenericBlacklist(normalizedHostname).catch(() => undefined)
-  ]);
+  const providerResults = await Promise.all(
+    EXTERNAL_THREAT_INTEL_PROVIDERS.map(async (provider) => {
+      if (!provider.shouldRun(config, normalizedInput)) {
+        return {
+          provider: provider.name,
+          checked: false,
+          scoreDelta: 0,
+          confidence: 0,
+          reasons: []
+        } satisfies ExternalThreatIntelProviderResult;
+      }
 
-  if (typeof rdap?.domainAgeDays === "number" && rdap.domainAgeDays >= 0 && rdap.domainAgeDays <= 30) {
-    scoreDelta += 18;
-    reasons.push("Domain appears to be very new based on RDAP registration data.");
-  } else if (typeof rdap?.domainAgeDays === "number" && rdap.domainAgeDays <= 90) {
-    scoreDelta += 10;
-    reasons.push("Domain appears recently registered based on RDAP data.");
-  }
+      try {
+        return await provider.run(config, normalizedInput);
+      } catch (error) {
+        return {
+          provider: provider.name,
+          checked: true,
+          scoreDelta: 0,
+          confidence: 0.25,
+          reasons: [`${provider.name} provider failed: ${error instanceof Error ? error.message : String(error)}`]
+        } satisfies ExternalThreatIntelProviderResult;
+      }
+    })
+  );
 
-  if (blacklist?.listed) {
-    scoreDelta += 26;
-    reasons.push(
-      blacklist.reason
-        ? `External blacklist provider flagged this host: ${blacklist.reason}.`
-        : "External blacklist provider flagged this host as risky."
-    );
-  }
+  const policy = applyThreatIntelPolicy(providerResults, config);
+  const reasons = providerResults.flatMap((result) => result.reasons);
+  const rdapEvidence = providerResults.find((result) => result.provider === "rdap")?.evidence as
+    | ExternalThreatIntelResult["rdap"]
+    | undefined;
+  const blacklistEvidence = providerResults.find((result) => result.provider === "blacklist")
+    ?.evidence as ExternalThreatIntelResult["blacklist"] | undefined;
 
   return {
     enabled: true,
-    rdap,
-    blacklist,
+    rdap: rdapEvidence?.hostname ? rdapEvidence : undefined,
+    blacklist: blacklistEvidence
+      ? {
+          checked: Boolean(blacklistEvidence.checked),
+          listed: Boolean(blacklistEvidence.listed),
+          provider: blacklistEvidence.provider,
+          reason: blacklistEvidence.reason
+        }
+      : undefined,
+    providers: providerResults,
+    policy,
     reasons,
-    scoreDelta
+    confidence: policy.confidence,
+    scoreDelta: policy.finalScoreDelta
   };
 }

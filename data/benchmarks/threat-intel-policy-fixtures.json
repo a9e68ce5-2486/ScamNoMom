@@ -1,0 +1,86 @@
+[
+  {
+    "id": "single-provider-penalty",
+    "providers": [
+      {
+        "provider": "learning_profile",
+        "scoreDelta": 20,
+        "confidence": 0.8
+      }
+    ],
+    "expected": {
+      "finalScoreDelta": 14,
+      "penaltyApplied": true,
+      "capApplied": false,
+      "positiveProviderCount": 1
+    }
+  },
+  {
+    "id": "multi-provider-boost",
+    "providers": [
+      {
+        "provider": "rdap",
+        "scoreDelta": 10,
+        "confidence": 0.7
+      },
+      {
+        "provider": "blacklist",
+        "scoreDelta": 18,
+        "confidence": 0.9
+      },
+      {
+        "provider": "learning_profile",
+        "scoreDelta": 6,
+        "confidence": 0.6
+      }
+    ],
+    "expected": {
+      "finalScoreDelta": 38,
+      "penaltyApplied": false,
+      "capApplied": false,
+      "positiveProviderCount": 3
+    }
+  },
+  {
+    "id": "cap-applied",
+    "providers": [
+      {
+        "provider": "rdap",
+        "scoreDelta": 80,
+        "confidence": 0.95
+      },
+      {
+        "provider": "blacklist",
+        "scoreDelta": 60,
+        "confidence": 0.95
+      }
+    ],
+    "expected": {
+      "finalScoreDelta": 38,
+      "penaltyApplied": false,
+      "capApplied": true,
+      "positiveProviderCount": 2
+    }
+  },
+  {
+    "id": "no-positive-signals",
+    "providers": [
+      {
+        "provider": "rdap",
+        "scoreDelta": 0,
+        "confidence": 0.4
+      },
+      {
+        "provider": "learning_profile",
+        "scoreDelta": 0,
+        "confidence": 0.3
+      }
+    ],
+    "expected": {
+      "finalScoreDelta": 0,
+      "penaltyApplied": false,
+      "capApplied": false,
+      "positiveProviderCount": 0
+    }
+  }
+]
