@@ -304,6 +304,24 @@ Optional notification webhook:
 MONITOR_WEBHOOK_URL=https://your-webhook-endpoint
 ```
 
+Notification channel templates:
+
+```bash
+# auto | slack | discord | line_notify | generic
+MONITOR_NOTIFY_CHANNEL=auto
+
+# LINE Notify (used when MONITOR_NOTIFY_CHANNEL=line_notify)
+MONITOR_LINE_NOTIFY_TOKEN=your_line_notify_token
+MONITOR_LINE_NOTIFY_URL=https://notify-api.line.me/api/notify
+```
+
+Template behavior:
+
+- Slack: block-formatted alert (status, fail source, trend arrows, top anomalies)
+- Discord: embed-formatted alert (status, fail source, trend arrows, top anomalies)
+- LINE Notify: compact text alert with trend arrows and top anomalies
+- Generic webhook: JSON `{ "text": "..." }` body
+
 Monitor thresholds can be tuned with env vars:
 
 ```bash

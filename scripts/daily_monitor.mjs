@@ -16,6 +16,7 @@ const DEFAULT_MIN_FEED_SUCCESS_RATE = 0.75;
 const DEFAULT_MAX_WARN_DELTA = 0.18;
 const DEFAULT_MIN_ANALYZED = 60;
 const DEFAULT_HISTORY_DAYS = 120;
+const DEFAULT_LINE_NOTIFY_URL = "https://notify-api.line.me/api/notify";
 
 function safeDivide(numerator, denominator) {
   return denominator ? numerator / denominator : 0;
@@ -41,12 +42,19 @@ function parseNumber(value, fallback, min, max) {
 }
 
 function monitorConfig() {
+  const rawChannel = String(process.env.MONITOR_NOTIFY_CHANNEL || "auto").trim().toLowerCase();
   return {
     minFeedSuccessRate: parseNumber(process.env.MONITOR_MIN_FEED_SUCCESS_RATE, DEFAULT_MIN_FEED_SUCCESS_RATE, 0, 1),
     maxWarnRateDelta: parseNumber(process.env.MONITOR_MAX_WARN_RATE_DELTA, DEFAULT_MAX_WARN_DELTA, 0.01, 1),
     minAnalyzed: Math.floor(parseNumber(process.env.MONITOR_MIN_ANALYZED, DEFAULT_MIN_ANALYZED, 10, 10000)),
     historyDays: Math.floor(parseNumber(process.env.MONITOR_HISTORY_DAYS, DEFAULT_HISTORY_DAYS, 7, 365)),
-    webhookUrl: String(process.env.MONITOR_WEBHOOK_URL || "").trim()
+    webhookUrl: String(process.env.MONITOR_WEBHOOK_URL || "").trim(),
+    notifyChannel:
+      rawChannel === "slack" || rawChannel === "discord" || rawChannel === "line_notify" || rawChannel === "generic"
+        ? rawChannel
+        : "auto",
+    lineNotifyToken: String(process.env.MONITOR_LINE_NOTIFY_TOKEN || "").trim(),
+    lineNotifyUrl: String(process.env.MONITOR_LINE_NOTIFY_URL || DEFAULT_LINE_NOTIFY_URL).trim()
   };
 }
 
@@ -118,6 +126,40 @@ function summarizeTrend(history, currentEntry) {
   };
 }
 
+function trendArrow(delta) {
+  if (delta >= 0.02) {
+    return "🔺";
+  }
+  if (delta <= -0.02) {
+    return "🔻";
+  }
+  return "⏺";
+}
+
+function statusEmoji(status) {
+  if (status === "critical") {
+    return "🚨";
+  }
+  if (status === "warning") {
+    return "⚠️";
+  }
+  return "✅";
+}
+
+function formatPercent(value) {
+  return `${(Number(value || 0) * 100).toFixed(1)}%`;
+}
+
+function topAnomalies(anomalies, limit = 3) {
+  const severityWeight = {
+    critical: 2,
+    warning: 1
+  };
+  return [...anomalies]
+    .sort((a, b) => (severityWeight[b.severity] || 0) - (severityWeight[a.severity] || 0))
+    .slice(0, limit);
+}
+
 function buildMarkdown(summary) {
   const anomalyLines = summary.anomalies.length
     ? summary.anomalies.map((item) => `- [${item.severity.toUpperCase()}] ${item.message}`).join("\n")
@@ -153,22 +195,110 @@ ${anomalyLines}
 }
 
 async function sendWebhookNotification(webhookUrl, summary) {
-  if (!webhookUrl) {
-    return { sent: false };
-  }
+  const topIssues = topAnomalies(summary.anomalies, 3);
+  const failSources = summary.feed.failedSources.length > 0 ? summary.feed.failedSources.join(", ") : "none";
+  const warnTrend = summary.trend?.deltaFrom7dAvg?.warnOrAboveRate || 0;
+  const highTrend = summary.trend?.deltaFrom7dAvg?.highOrBlockedRate || 0;
+  const warnTrendLine = `${trendArrow(warnTrend)} warn-or-above vs 7d: ${formatPercent(warnTrend)}`;
+  const highTrendLine = `${trendArrow(highTrend)} high-or-blocked vs 7d: ${formatPercent(highTrend)}`;
+  const header = `${statusEmoji(summary.status)} ScamNoMom daily monitor: ${summary.status.toUpperCase()}`;
+  const issueLines = topIssues.length > 0 ? topIssues.map((item) => `• [${item.severity}] ${item.message}`) : ["• no anomalies"];
 
-  const anomalyText = summary.anomalies.length
-    ? summary.anomalies.map((item) => `[${item.severity}] ${item.message}`).join(" | ")
-    : "no anomalies";
   const message = [
-    `ScamNoMom daily monitor: ${summary.status.toUpperCase()}`,
-    `feed success rate=${summary.feed.successRate}, failed sources=${summary.feed.failedSources.join(", ") || "none"}`,
-    `model warnOrAbove=${summary.modelTest.warnOrAboveRate}, highOrBlocked=${summary.modelTest.highOrBlockedRate}`,
-    `trend delta(7d warn)=${summary.trend.deltaFrom7dAvg.warnOrAboveRate}`,
-    `anomalies=${anomalyText}`
+    header,
+    `Feed success: ${formatPercent(summary.feed.successRate)} | failed source: ${failSources}`,
+    `Model warn-or-above: ${formatPercent(summary.modelTest.warnOrAboveRate)} | high-or-blocked: ${formatPercent(summary.modelTest.highOrBlockedRate)}`,
+    warnTrendLine,
+    highTrendLine,
+    "Top anomalies:",
+    ...issueLines
   ].join("\n");
 
+  const effectiveChannel =
+    webhookUrl && webhookUrl.includes("hooks.slack.com")
+      ? "slack"
+      : webhookUrl && webhookUrl.includes("discord.com/api/webhooks")
+        ? "discord"
+        : "generic";
+
   try {
+    if (effectiveChannel === "slack") {
+      const payload = {
+        text: message,
+        blocks: [
+          {
+            type: "header",
+            text: {
+              type: "plain_text",
+              text: `${statusEmoji(summary.status)} ScamNoMom Daily Monitor`
+            }
+          },
+          {
+            type: "section",
+            fields: [
+              { type: "mrkdwn", text: `*Status*\n${summary.status.toUpperCase()}` },
+              { type: "mrkdwn", text: `*Feed success*\n${formatPercent(summary.feed.successRate)}` },
+              { type: "mrkdwn", text: `*Warn-or-above*\n${formatPercent(summary.modelTest.warnOrAboveRate)}` },
+              { type: "mrkdwn", text: `*High-or-blocked*\n${formatPercent(summary.modelTest.highOrBlockedRate)}` }
+            ]
+          },
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `*Failed sources:* ${failSources}\n*Trend:* ${warnTrendLine} | ${highTrendLine}`
+            }
+          },
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `*Top anomalies*\n${issueLines.join("\n")}`
+            }
+          }
+        ]
+      };
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        return { sent: false, channel: "slack", error: `webhook HTTP ${response.status}` };
+      }
+      return { sent: true, channel: "slack" };
+    }
+
+    if (effectiveChannel === "discord") {
+      const color = summary.status === "critical" ? 15158332 : summary.status === "warning" ? 16753920 : 5763719;
+      const payload = {
+        content: `${statusEmoji(summary.status)} ScamNoMom daily monitor`,
+        embeds: [
+          {
+            title: `Status: ${summary.status.toUpperCase()}`,
+            color,
+            fields: [
+              { name: "Feed success", value: formatPercent(summary.feed.successRate), inline: true },
+              { name: "Failed sources", value: failSources, inline: true },
+              { name: "Warn-or-above", value: formatPercent(summary.modelTest.warnOrAboveRate), inline: true },
+              { name: "High-or-blocked", value: formatPercent(summary.modelTest.highOrBlockedRate), inline: true },
+              { name: "Trend", value: `${warnTrendLine}\n${highTrendLine}`, inline: false },
+              { name: "Top anomalies", value: issueLines.join("\n"), inline: false }
+            ]
+          }
+        ]
+      };
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        return { sent: false, channel: "discord", error: `webhook HTTP ${response.status}` };
+      }
+      return { sent: true, channel: "discord" };
+    }
+
     const response = await fetch(webhookUrl, {
       method: "POST",
       headers: {
@@ -179,16 +309,80 @@ async function sendWebhookNotification(webhookUrl, summary) {
     if (!response.ok) {
       return {
         sent: false,
+        channel: "generic",
         error: `webhook HTTP ${response.status}`
       };
     }
-    return { sent: true };
+    return { sent: true, channel: "generic" };
   } catch (error) {
     return {
       sent: false,
+      channel: effectiveChannel,
       error: error instanceof Error ? error.message : String(error)
     };
   }
+}
+
+async function sendLineNotify(config, summary) {
+  if (!config.lineNotifyToken) {
+    return { sent: false, channel: "line_notify", error: "MONITOR_LINE_NOTIFY_TOKEN is empty" };
+  }
+
+  const topIssues = topAnomalies(summary.anomalies, 3);
+  const failSources = summary.feed.failedSources.length > 0 ? summary.feed.failedSources.join(", ") : "none";
+  const warnTrend = summary.trend?.deltaFrom7dAvg?.warnOrAboveRate || 0;
+  const highTrend = summary.trend?.deltaFrom7dAvg?.highOrBlockedRate || 0;
+  const issueLines = topIssues.length > 0 ? topIssues.map((item) => `• [${item.severity}] ${item.message}`) : ["• no anomalies"];
+  const message = [
+    `${statusEmoji(summary.status)} ScamNoMom daily monitor ${summary.status.toUpperCase()}`,
+    `Feed success: ${formatPercent(summary.feed.successRate)}`,
+    `Failed source: ${failSources}`,
+    `Warn-or-above: ${formatPercent(summary.modelTest.warnOrAboveRate)}`,
+    `High-or-blocked: ${formatPercent(summary.modelTest.highOrBlockedRate)}`,
+    `${trendArrow(warnTrend)} warn vs 7d: ${formatPercent(warnTrend)}`,
+    `${trendArrow(highTrend)} high vs 7d: ${formatPercent(highTrend)}`,
+    "Top anomalies:",
+    ...issueLines
+  ].join("\n");
+
+  try {
+    const response = await fetch(config.lineNotifyUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.lineNotifyToken}`,
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        message
+      })
+    });
+    if (!response.ok) {
+      return { sent: false, channel: "line_notify", error: `line notify HTTP ${response.status}` };
+    }
+    return { sent: true, channel: "line_notify" };
+  } catch (error) {
+    return {
+      sent: false,
+      channel: "line_notify",
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+async function sendNotification(config, summary) {
+  if (config.notifyChannel === "line_notify") {
+    return sendLineNotify(config, summary);
+  }
+
+  if (!config.webhookUrl) {
+    return { sent: false, channel: config.notifyChannel === "auto" ? "generic" : config.notifyChannel };
+  }
+
+  if (config.notifyChannel === "slack" || config.notifyChannel === "discord" || config.notifyChannel === "generic") {
+    return sendWebhookNotification(config.webhookUrl, summary);
+  }
+
+  return sendWebhookNotification(config.webhookUrl, summary);
 }
 
 async function main() {
@@ -328,7 +522,7 @@ async function main() {
   await writeFile(SUMMARY_JSON_PATH, JSON.stringify(summary, null, 2));
   await writeFile(SUMMARY_MD_PATH, buildMarkdown(summary));
 
-  const webhook = await sendWebhookNotification(config.webhookUrl, summary);
+  const webhook = await sendNotification(config, summary);
 
   console.log(
     JSON.stringify(

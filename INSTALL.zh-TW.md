@@ -292,6 +292,36 @@ node scripts/install_daily_pipeline_schedule.mjs --hour 3 --minute 15 --monitor
 MONITOR_WEBHOOK_URL=https://your-webhook-endpoint
 ```
 
+通知通道（可選）：
+
+```bash
+MONITOR_NOTIFY_CHANNEL=auto
+```
+
+可用值：
+
+- `auto`（預設，依 webhook URL 自動判斷 Slack / Discord，否則 generic）
+- `slack`
+- `discord`
+- `generic`
+- `line_notify`
+
+若要用 LINE Notify：
+
+```bash
+MONITOR_NOTIFY_CHANNEL=line_notify
+MONITOR_LINE_NOTIFY_TOKEN=your_line_notify_token
+# 可選，預設 https://notify-api.line.me/api/notify
+MONITOR_LINE_NOTIFY_URL=https://notify-api.line.me/api/notify
+```
+
+通知內容會包含：
+
+- fail source 清單
+- 成功率與警報比例
+- 趨勢箭頭（相對 7 日平均）
+- Top anomalies（最多 3 條）
+
 監控門檻可透過環境變數調整：
 
 ```bash
