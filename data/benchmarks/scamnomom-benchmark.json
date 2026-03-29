@@ -175,7 +175,7 @@
     "kind": "text",
     "label": "phishing",
     "minScore": 50,
-    "expectedAction": "warn",
+    "expectedAction": "block",
     "input": {
       "source": "text",
       "channel": "phone_transcript",

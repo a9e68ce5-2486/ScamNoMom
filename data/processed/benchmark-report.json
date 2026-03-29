@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-29T01:24:10.355Z",
+  "generatedAt": "2026-03-29T22:48:18.371Z",
   "summary": {
     "total": 6,
     "pageCases": 4,
@@ -94,16 +94,16 @@
     "threshold": 70,
     "metrics": {
       "total": 6,
-      "tp": 2,
+      "tp": 3,
       "tn": 3,
       "fp": 0,
-      "fn": 1,
-      "accuracy": 0.8333,
+      "fn": 0,
+      "accuracy": 1,
       "precision": 1,
-      "recall": 0.6667,
-      "f1": 0.8,
+      "recall": 1,
+      "f1": 1,
       "falsePositiveRate": 0,
-      "falseNegativeRate": 0.3333
+      "falseNegativeRate": 0
     },
     "byKind": {
       "page": {
@@ -121,16 +121,16 @@
       },
       "text": {
         "total": 2,
-        "tp": 0,
+        "tp": 1,
         "tn": 1,
         "fp": 0,
-        "fn": 1,
-        "accuracy": 0.5,
-        "precision": 0,
-        "recall": 0,
-        "f1": 0,
+        "fn": 0,
+        "accuracy": 1,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
         "falsePositiveRate": 0,
-        "falseNegativeRate": 1
+        "falseNegativeRate": 0
       }
     },
     "byAttackType": {
@@ -162,16 +162,16 @@
       },
       "customer_service_scam": {
         "total": 1,
-        "tp": 0,
+        "tp": 1,
         "tn": 0,
         "fp": 0,
-        "fn": 1,
-        "accuracy": 0,
-        "precision": 0,
-        "recall": 0,
-        "f1": 0,
+        "fn": 0,
+        "accuracy": 1,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
         "falsePositiveRate": 0,
-        "falseNegativeRate": 1
+        "falseNegativeRate": 0
       }
     }
   },
@@ -180,7 +180,7 @@
       "id": "web_phish_login_brand_mismatch",
       "kind": "page",
       "label": "phishing",
-      "score": 83,
+      "score": 95,
       "action": "block",
       "attackType": "credential_harvest"
     },
@@ -188,7 +188,7 @@
       "id": "web_safe_corporate_homepage",
       "kind": "page",
       "label": "safe",
-      "score": 6,
+      "score": 9,
       "action": "allow",
       "attackType": "unknown"
     },
@@ -204,7 +204,7 @@
       "id": "email_safe_newsletter",
       "kind": "page",
       "label": "safe",
-      "score": 9,
+      "score": 11,
       "action": "allow",
       "attackType": "unknown"
     },
@@ -212,15 +212,15 @@
       "id": "text_phone_transfer_scam",
       "kind": "text",
       "label": "phishing",
-      "score": 53,
-      "action": "warn",
+      "score": 100,
+      "action": "block",
       "attackType": "customer_service_scam"
     },
     {
       "id": "text_safe_notice",
       "kind": "text",
       "label": "safe",
-      "score": 0,
+      "score": 1,
       "action": "allow",
       "attackType": "unknown"
     }

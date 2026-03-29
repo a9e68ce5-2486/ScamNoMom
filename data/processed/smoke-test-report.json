@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-29T01:24:08.122Z",
+  "generatedAt": "2026-03-29T22:48:08.482Z",
   "summary": {
     "total": 6,
     "passed": 6,
@@ -13,7 +13,7 @@
       "passed": true,
       "expectedAction": "block",
       "actualAction": "block",
-      "score": 83,
+      "score": 95,
       "attackType": "credential_harvest"
     },
     {
@@ -23,7 +23,7 @@
       "passed": true,
       "expectedAction": "allow",
       "actualAction": "allow",
-      "score": 6,
+      "score": 9,
       "attackType": "unknown"
     },
     {
@@ -43,7 +43,7 @@
       "passed": true,
       "expectedAction": "allow",
       "actualAction": "allow",
-      "score": 9,
+      "score": 11,
       "attackType": "unknown"
     },
     {
@@ -51,9 +51,9 @@
       "kind": "text",
       "label": "phishing",
       "passed": true,
-      "expectedAction": "warn",
-      "actualAction": "warn",
-      "score": 53,
+      "expectedAction": "block",
+      "actualAction": "block",
+      "score": 100,
       "attackType": "customer_service_scam"
     },
     {
@@ -63,7 +63,7 @@
       "passed": true,
       "expectedAction": "allow",
       "actualAction": "allow",
-      "score": 0,
+      "score": 1,
       "attackType": "unknown"
     }
   ]

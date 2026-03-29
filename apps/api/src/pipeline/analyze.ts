@@ -98,7 +98,12 @@ export async function analyzeFeatures(features: PageFeatures, calibration?: User
     text: interventionText
   });
   const scoreWithIntervention = Math.max(combinedScore, Math.min(100, combinedScore + Math.round(intervention.score * 0.45)));
-  const calibrationApplied = applyUserCalibration(scoreWithIntervention, calibration);
+  const calibrationApplied = applyUserCalibration({
+    baseScore: scoreWithIntervention,
+    attackType: llmResult.attackType,
+    profile: calibration,
+    intervention
+  });
   const initialRouterDecision = routeDecision(calibrationApplied.score, intervention.severity === "high");
 
   const agentResult =
@@ -109,14 +114,21 @@ export async function analyzeFeatures(features: PageFeatures, calibration?: User
         })
       : null;
 
+  const finalAttackType = agentResult?.attackType ?? llmResult.attackType;
   const finalScoreRaw = agentResult?.score ?? calibrationApplied.score;
-  const calibratedFinal = applyUserCalibration(finalScoreRaw, calibration);
+  const calibratedFinal = agentResult
+    ? applyUserCalibration({
+        baseScore: finalScoreRaw,
+        attackType: finalAttackType,
+        profile: calibration,
+        intervention
+      })
+    : calibrationApplied;
   const finalScore = calibratedFinal.score;
   const finalDecision = agentResult ? resolveFinalDecision(finalScore) : initialRouterDecision;
   const finalReasons = agentResult
     ? [...new Set([...mergeReasons([...ruleResult.reasons, ...urlRisk.reasons], llmResult.reasons), ...agentResult.reasons])]
     : mergeReasons([...ruleResult.reasons, ...urlRisk.reasons], llmResult.reasons);
-  const finalAttackType = agentResult?.attackType ?? llmResult.attackType;
   const finalConfidence = agentResult
     ? Math.max(llmResult.confidence, agentResult.confidence)
     : llmResult.confidence;

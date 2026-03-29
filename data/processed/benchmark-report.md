@@ -1,6 +1,6 @@
 # ScamNoMom Benchmark Report
 
-Generated at: 2026-03-29T01:24:10.355Z
+Generated at: 2026-03-29T22:48:18.371Z
 
 ## Summary
 
@@ -31,16 +31,16 @@ Generated at: 2026-03-29T01:24:10.355Z
 ```json
 {
   "total": 6,
-  "tp": 2,
+  "tp": 3,
   "tn": 3,
   "fp": 0,
-  "fn": 1,
-  "accuracy": 0.8333,
+  "fn": 0,
+  "accuracy": 1,
   "precision": 1,
-  "recall": 0.6667,
-  "f1": 0.8,
+  "recall": 1,
+  "f1": 1,
   "falsePositiveRate": 0,
-  "falseNegativeRate": 0.3333
+  "falseNegativeRate": 0
 }
 ```
 

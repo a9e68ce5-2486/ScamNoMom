@@ -184,14 +184,6 @@ function analyzeConversationFromPrompt() {
   });
 }
 
-function setStatus(result, features) {
-  for (const action of intervention.suggestedActions || []) {
-    const li = document.createElement("li");
-    li.textContent = action;
-    actions.appendChild(li);
-  }
-}
-
 function getActionGuide(result, features) {
   if (!result) {
     return "暫無分析結果。";
