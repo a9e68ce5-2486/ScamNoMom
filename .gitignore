@@ -5,3 +5,4 @@ apps/api/node_modules/
 apps/api/dist/
 apps/api/data/feedback.json
 Untitled/
+scripts/pipeline/__pycache__/
