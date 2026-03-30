@@ -34,7 +34,8 @@
     "service:install:dev": "node scripts/install_api_service_schedule.mjs --dev",
     "service:uninstall": "node scripts/install_api_service_schedule.mjs --uninstall",
     "release:extension": "node scripts/package_extension_release.mjs",
-    "release:bundle": "node scripts/package_portable_bundle.mjs"
+    "release:bundle": "node scripts/package_portable_bundle.mjs",
+    "test:generalization": "cd apps/api && npm run build && cd ../.. && node scripts/test_generalization.mjs"
   },
   "dependencies": {
     "jsdom": "^29.0.1"

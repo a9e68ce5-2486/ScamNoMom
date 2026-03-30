@@ -676,11 +676,21 @@ function renderOverlay(result, settings) {
 }
 
 function collectFeatures() {
-  const forms = Array.from(document.forms);
-  const links = Array.from(document.querySelectorAll("a[href]"));
-  const hiddenElements = document.querySelectorAll("[hidden], [style*='display:none'], [style*='visibility:hidden']");
-  const pageText = (document.body?.innerText || "").slice(0, 5000);
-  const emailContext = detectEmailContext();
+  const detectedEmailContext = detectEmailContext();
+  const fallbackProvider = getWebmailProviderByHost(location.hostname);
+  const isDetailView = isLikelyMessageDetailView(location.hostname.toLowerCase());
+  const emailContext =
+    detectedEmailContext || (fallbackProvider && isDetailView ? buildMinimalWebmailEmailContext(fallbackProvider) : null);
+  const analysisRoot = emailContext ? getEmailAnalysisRoot(emailContext) : document.body;
+  const forms = Array.from((analysisRoot || document).querySelectorAll?.("form") || document.forms);
+  const links = emailContext
+    ? collectEmailLinks(analysisRoot || document)
+    : Array.from((analysisRoot || document).querySelectorAll?.("a[href]") || document.querySelectorAll("a[href]"));
+  const federatedLogins = emailContext ? [] : collectFederatedLogins();
+  const hiddenElements = (analysisRoot || document).querySelectorAll?.(
+    "[hidden], [style*='display:none'], [style*='visibility:hidden']"
+  ) || document.querySelectorAll("[hidden], [style*='display:none'], [style*='visibility:hidden']");
+  const pageText = (analysisRoot?.innerText || document.body?.innerText || "").slice(0, 5000);
   const combinedText = emailContext
     ? `${emailContext.subject || ""} ${emailContext.sender || ""} ${emailContext.bodyText || ""}`.slice(0, 5000)
     : pageText;
