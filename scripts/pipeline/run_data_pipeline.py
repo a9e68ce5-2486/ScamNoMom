@@ -30,6 +30,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -41,6 +42,23 @@ sys.path.insert(0, str(Path(__file__).parent))
 import build_dataset
 import fetch_tw_sources
 import label_with_llm
+
+
+def _resolve_api_key() -> str:
+    """Return OPENAI_API_KEY from env or apps/api/.env, whichever is available."""
+    key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if key:
+        return key
+    env_path = Path(__file__).resolve().parents[2] / "apps" / "api" / ".env"
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            m = re.match(r"^OPENAI_API_KEY=(.+)", line.strip())
+            if m:
+                key = m.group(1).strip().strip('"').strip("'")
+                if key:
+                    os.environ["OPENAI_API_KEY"] = key  # set for child modules
+                    return key
+    return ""
 
 
 def _now() -> str:
@@ -60,11 +78,14 @@ def run(
     max_pages:   int  = 5,
     label_limit: int | None = None,
     sources:     list[str] | None = None,
-    label_model: str = label_with_llm.DEFAULT_MODEL,
+    label_backend: str | None = None,
     confidence_threshold: float = label_with_llm.CONFIDENCE_THRESHOLD,
 ) -> dict:
     started_at = _now()
     pipeline_stats: dict = {"startedAt": started_at, "steps": {}}
+
+    # Resolve API key early so OpenAI backend can find it if needed
+    _resolve_api_key()
 
     # ── Step 1: Fetch ─────────────────────────────────────────────────────────
     if skip_fetch:
@@ -82,17 +103,13 @@ def run(
     if skip_label:
         print("\n[Step 2/3] label_with_llm — SKIPPED (--skip-label)")
         pipeline_stats["steps"]["label"] = "skipped"
-    elif not os.environ.get("OPENAI_API_KEY"):
-        print("\n[Step 2/3] label_with_llm — SKIPPED (OPENAI_API_KEY not set)")
-        print("  Set OPENAI_API_KEY to enable automatic LLM labeling.")
-        pipeline_stats["steps"]["label"] = "skipped_no_api_key"
     else:
         _header("Step 2/3 — LLM auto-labeling")
         t0 = time.time()
         label_stats = label_with_llm.run(
             sources=sources,
             limit=label_limit,
-            model=label_model,
+            backend=label_backend,
             confidence_threshold=confidence_threshold,
         )
         elapsed = round(time.time() - t0, 1)
@@ -140,8 +157,8 @@ if __name__ == "__main__":
     parser.add_argument("--max-pages",   type=int, default=5,  help="Max pages per source to scrape")
     parser.add_argument("--label-limit", type=int,             help="Max new records to label per run")
     parser.add_argument("--sources",     nargs="*",            help="Source keys to process (default: all)")
-    parser.add_argument("--model",       default=label_with_llm.DEFAULT_MODEL,
-                                         help=f"OpenAI model for labeling (default: {label_with_llm.DEFAULT_MODEL})")
+    parser.add_argument("--backend",     choices=["openai", "ollama"],
+                                         help="LLM backend (default: auto — ollama if no OpenAI key)")
     parser.add_argument("--threshold",   type=float, default=label_with_llm.CONFIDENCE_THRESHOLD,
                                          help=f"Confidence threshold (default: {label_with_llm.CONFIDENCE_THRESHOLD})")
     args = parser.parse_args()
@@ -152,7 +169,7 @@ if __name__ == "__main__":
         max_pages=args.max_pages,
         label_limit=args.label_limit,
         sources=args.sources,
-        label_model=args.model,
+        label_backend=args.backend,
         confidence_threshold=args.threshold,
     )
 
